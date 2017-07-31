@@ -11,6 +11,7 @@ func Route(frame *faygo.Framework) {
 	frame.Route(
 		frame.NewNamedAPI("Index", "GET", "/", handler.Index),
 		frame.NewNamedAPI("test struct handler", "POST", "/test", &handler.Test{}).Use(middleware.Token),
-		frame.NewPOST("/frankDetailList.go",&handler.FrankDetail),
+		frame.NewPOST("/frank/DetailList.go", &handler.FrankDetail),
+		frame.NewPOST("/frank/search.go", &handler.Search),
 	)
 }
