@@ -1,9 +1,6 @@
 package model
 
 import (
-	"fmt"
-	"github.com/zhangweilun/tradeweb/constants"
-	"github.com/zhangweilun/tradeweb/util"
 	"time"
 )
 
@@ -74,17 +71,40 @@ type Frank struct {
 	OrderWeight      float64  `json:"OrderWeight"`
 	Supplier         string   `json:"Supplier"`
 	ProDesc          string   `json:"ProDesc"`
+	ProKey           string   `json:"pro_key"`
 	OriginalCountry  string   `json:"OriginalCountry"`
 	SupplierAddress  string   `json:"SupplierAddress"`
 	FrankTime        JsonDate `json:"FrankTime"`
 	OrderVolume      float64  `json:"OrderVolume"`
 	QiyunPort        string   `json:"QiyunPort"`
 	TradeNumber      int64    `json:"TradeNumber"`
+	CompanyName string `json:"company_name"`
+	CompanyId int64 `json:"company_id"`
+	Score            int      `json:"score"`
+}
+
+type Product struct {
+	ProductName string `json:"productName"`
+	ProId       int    `json:"proId"`
+	Cid         int    `json:"cid"`
+	Cname       string `json:"cname"`
 }
 
 type Response struct {
-	Error string  `json:"error"`
-	Code  int     `json:"code"`
-	List  []Frank `json:"list"`
-	Total int64   `json:"total"`
+	Error string      `json:"error"`
+	Code  int         `json:"code"`
+	Date  interface{} `json:"date"`
+	List  interface{} `json:"list"`
+	Total int64       `json:"total"`
+}
+
+type TopTenProduct struct {
+	ProductName string `json:"product_name"`
+	Count       int64  `json:"count"`
+}
+
+type Relationship struct {
+	CompanyId   int64
+	CompanyName string
+	Partner     []Relationship
 }

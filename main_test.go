@@ -7,6 +7,8 @@ import (
 
 	"testing"
 	"time"
+
+	"net/url"
 )
 
 /**
@@ -143,4 +145,10 @@ func TestJson(t *testing.T) {
 		panic(err)
 	}
 	fmt.Println(string(q))
+}
+
+func TestDiv(t *testing.T) {
+	encodeurl:= url.QueryEscape("5foGXY1Jqys5tQQCSkDF/dk+KxE=")
+	fmt.Println(encodeurl)
+	unescape, queryUnescape := url.QueryUnescape(encodeurl)
 }
