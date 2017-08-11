@@ -11,23 +11,29 @@ func Route(frame *faygo.Framework) {
 	frame.Route(
 		frame.NewGroup("/frank",
 			frame.NewPOST("/DetailList.go", &handler.FrankDetail),
+
 			frame.NewOPTIONS("/search.go").Use(middleware.CrossOrigin),
 			frame.NewPOST("/search.go", &handler.Search).Use(middleware.CrossOrigin),
+
+			frame.NewOPTIONS("/topTen.go").Use(middleware.CrossOrigin),
 			frame.NewPOST("/topTen.go", &handler.TopTenProduct),
+
 			frame.NewPOST("/CompanyRelations.go", &handler.CompanyRelations).Use(middleware.CrossOrigin),
 			frame.NewOPTIONS("/CompanyRelations.go").Use(middleware.CrossOrigin),
-			frame.NewPOST("/GroupHistory.go", &handler.GroupHistory),
-			frame.NewPOST("/NewTenFrank.go", &handler.NewTenFrank),
-			frame.NewPOST("/ProductList.go", &handler.ProductList),),
+
+			frame.NewOPTIONS("/GroupHistory.go").Use(middleware.CrossOrigin),
+			frame.NewPOST("/GroupHistory.go", &handler.GroupHistory).Use(middleware.CrossOrigin),
+
+			frame.NewOPTIONS("/NewTenFrank.go").Use(middleware.CrossOrigin),
+			frame.NewPOST("/NewTenFrank.go", &handler.NewTenFrank).Use(middleware.CrossOrigin),
+
+			frame.NewOPTIONS("/ProductList.go").Use(middleware.CrossOrigin),
+			frame.NewPOST("/ProductList.go", &handler.ProductList).Use(middleware.CrossOrigin),
+			frame.NewOPTIONS("/InfoDetail.go").Use(middleware.CrossOrigin),
+			frame.NewPOST("/InfoDetail.go",&handler.InfoDetail).Use(middleware.CrossOrigin),
+		),
+
 		frame.NewNamedAPI("Index", "GET", "/", handler.Index),
 		frame.NewNamedAPI("test struct handler", "POST", "/test", &handler.Test{}).Use(middleware.Token),
-		//frame.NewPOST("/frank/DetailList.go", &handler.FrankDetail),
-		//frame.NewOPTIONS("/frank/search.go").Use(middleware.CrossOrigin),
-		//frame.NewPOST("/frank/search.go", &handler.Search).Use(middleware.CrossOrigin),
-		//frame.NewPOST("/frank/topTen.go", &handler.TopTenProduct),
-		//frame.NewPOST("/frank/CompanyRelations.go", &handler.CompanyRelations),
-		//frame.NewPOST("/frank/GroupHistory.go", &handler.GroupHistory),
-		//frame.NewPOST("/frank/NewTenFrank.go", &handler.NewTenFrank),
-		//frame.NewPOST("/frank/ProductList.go", &handler.ProductList),
 	)
 }

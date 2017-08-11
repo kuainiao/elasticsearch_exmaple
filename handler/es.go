@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/henrylee2cn/faygo"
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/zhangweilun/tradeweb/constants"
 	"github.com/zhangweilun/tradeweb/model"
 	util "github.com/zhangweilun/tradeweb/util"
@@ -24,14 +24,15 @@ import (
 **/
 
 type detailQuery struct {
-	CompanyType int           `json:"company_type"` // 0：采购商 1:供应商
-	PageNo      int           `json:"page_no"`
-	PageSize    int           `json:"page_size"`
-	CompanyId   int64         `json:"company_id"`
-	ProKey      string        `json:"pro_key"`
-	TimeOut     time.Duration `json:"time_out"`
-	CompanyName string        `json:"company_name"`
-	Sort        int           `json:"sort"` //1:tradeNumber 倒序 2volume 3weight
+	CompanyType     int           `json:"company_type,omitempty"` // 0：采购商 1:供应商
+	PageNo          int           `json:"page_no"`
+	PageSize        int           `json:"page_size"`
+	CompanyId       int64         `json:"company_id"`
+	ProKey          string        `json:"pro_key"`
+	TimeOut         time.Duration `json:"time_out"`
+	CompanyName     string        `json:"company_name"`
+	Sort            int           `json:"sort"` //1:tradeNumber 倒序 2volume 3weight
+	LinkedCompanyId int           `json:"linked_company_id,omitempty"`
 }
 
 type queryParam struct {
@@ -106,27 +107,27 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	//https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_filtering_values_with_partitions
 	//分页等分区处理
 	if param.Sort == 2 {
-		agg = agg.OrderByAggregation("volume", false).
-			Size(param.PageSize * param.PageNo)
+		agg = agg.OrderByAggregation("volume", false)
+
 	} else if param.Sort == -2 {
-		agg = agg.OrderByAggregation("volume", true).
-			Size(param.PageSize * param.PageNo)
+		agg = agg.OrderByAggregation("volume", true)
+
 	} else if param.Sort == 3 {
-		agg = agg.OrderByAggregation("weight", false).
-			Size(param.PageSize * param.PageNo)
+		agg = agg.OrderByAggregation("weight", false)
+
 	} else if param.Sort == -3 {
-		agg = agg.OrderByAggregation("weight", true).
-			Size(param.PageSize * param.PageNo)
+		agg = agg.OrderByAggregation("weight", true)
+
 	} else if param.Sort == 1 {
-		agg = agg.OrderByCount(false).
-			Size(param.PageSize * param.PageNo)
+		agg = agg.OrderByCount(false)
+
 	} else if param.Sort == -1 {
-		agg = agg.OrderByCount(true).
-			Size(param.PageSize * param.PageNo)
+		agg = agg.OrderByCount(true)
+
 	} else {
-		agg = agg.OrderByCount(false).
-			Size(param.PageSize * param.PageNo)
+		agg = agg.OrderByCount(false)
 	}
+	agg.Size(param.PageSize * param.PageNo)
 	weightAgg := elastic.NewSumAggregation().Field("OrderWeight")
 	volumeAgg := elastic.NewSumAggregation().Field("OrderVolume")
 	agg = agg.SubAggregation("weight", weightAgg)
@@ -271,6 +272,7 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		var frank model.Frank
 		jsonObject, _ := detail.MarshalJSON()
 		jsoniter.Unmarshal(jsonObject, &frank)
+
 		//高亮
 		hight := res.Hits.Hits[i].Highlight
 		if param.ProDesc != "" {
@@ -292,9 +294,10 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	return ctx.JSON(200, response)
 })
 
-//详情
+// TopTenProduct... 详情
 //top10饼图和中间的商品名称 all product由前端展示
 //传入参数公司id 公司类型
+
 var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var (
 		TopTenProductCtx context.Context
@@ -340,9 +343,10 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	return ctx.JSON(200, response)
 })
 
-//详情
+// CompanyRelations ... 详情
 //公司关系图
 //传入参数proKey 公司id 公司类型
+//去重还未完成
 var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var (
 		CompanyRelationsCtx context.Context
@@ -402,12 +406,13 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 
 		//查采购 二级
 		serviceTwo := client.Search().Index("trade").Type("frank")
+		serviceTwo.Size(2).Sort("FrankTime", false)
 		for j := 0; j < len(relationship.Partner); j++ {
 			query := elastic.NewBoolQuery()
 			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
 			query = query.Must(elastic.NewTermQuery("SupplierId", relationship.Partner[j].CompanyId))
 			query = query.QueryName("filter")
-			res, err := serviceTwo.Query(query).Size(2).Sort("FrankTime", false).Do(CompanyRelationsCtx)
+			res, err := serviceTwo.Query(query).Do(CompanyRelationsCtx)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -434,13 +439,14 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 
 		//查供应商 三级
 		serviceThree := client.Search().Index("trade").Type("frank")
+		serviceThree = serviceThree.Size(2).Sort("FrankTime", false)
 		for j := 0; j < len(relationship.Partner); j++ {
 			for i := 0; i < len(relationship.Partner[j].Partner); i++ {
 				query := elastic.NewBoolQuery()
 				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
 				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[j].Partner[i].CompanyId))
 				query = query.QueryName("filter")
-				res, err := serviceThree.Query(query).Size(2).Sort("FrankTime", false).Do(CompanyRelationsCtx)
+				res, err := serviceThree.Query(query).Do(CompanyRelationsCtx)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -547,17 +553,17 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		}
 
 	}
-
 	return ctx.JSON(200, model.Response{
 		List: relationship,
 		Code: 0,
 	})
 })
 
-//详情
+// GroupHistory... 详情
 //Nearly a year of trading history
 //通过proKey相关的公司的近一年的交易记录 如果是采购上进来 先查prokey 再通过group supplier分组来处理
 //传入 参数 proKey 公司ID 公司类型
+// ok
 var GroupHistory = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var (
 		GroupHistoryCtx context.Context
@@ -579,43 +585,74 @@ var GroupHistory = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	GroupHistorySearch := client.Search().Index("trade").Type("frank")
 	query := elastic.NewBoolQuery()
 	highlight := elastic.NewHighlight()
+	var cardinality *elastic.CardinalityAggregation
+	//过滤一年
+	//query.Must(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
+	query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
 	if param.ProKey != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
 		highlight.Field("ProDesc")
 		if param.CompanyType == 0 {
 			if param.CompanyId != 0 {
 				query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
+				cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
 			}
 		} else {
 			if param.CompanyId != 0 {
 				query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyId))
+				cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
 			}
 		}
 	}
+	countSearch := client.Search().Index("trade").Type("frank")
+	count, _ := countSearch.Query(query).Aggregation("count", cardinality).Size(0).Do(GroupHistoryCtx)
+	resCardinality, _ := count.Aggregations.Cardinality("count")
 	//采购进来的
 	agg := elastic.NewTermsAggregation()
 	if param.CompanyType == 0 {
 		agg.Field("SupplierId")
-		//weightAgg := elastic.NewSumAggregation().Field("SupplierId")
 	} else {
 		agg.Field("PurchaserId")
 	}
+	//排序
+	if param.Sort == 2 {
+		agg = agg.OrderByAggregation("volume", false)
+
+	} else if param.Sort == -2 {
+		agg = agg.OrderByAggregation("volume", true)
+
+	} else if param.Sort == 3 {
+		agg = agg.OrderByAggregation("weight", false)
+
+	} else if param.Sort == -3 {
+		agg = agg.OrderByAggregation("weight", true)
+
+	} else if param.Sort == 1 {
+		agg = agg.OrderByCount(false)
+
+	} else if param.Sort == -1 {
+		agg = agg.OrderByCount(true)
+
+	} else {
+		agg = agg.OrderByCount(false)
+	}
+	agg = agg.Size(param.PageSize * param.PageNo)
 	weightAgg := elastic.NewSumAggregation().Field("OrderWeight")
 	volumeAgg := elastic.NewSumAggregation().Field("OrderVolume")
 	agg = agg.SubAggregation("weight", weightAgg)
 	agg = agg.SubAggregation("volume", volumeAgg)
 	agg = agg.OrderByCount(false)
-	GroupHistorySearch = GroupHistorySearch.Aggregation("search", agg).RequestCache(true)
+	GroupHistorySearch = GroupHistorySearch.Query(query).Aggregation("search", agg).RequestCache(true)
 	res, _ := GroupHistorySearch.Size(0).Do(GroupHistoryCtx)
 	aggregations := res.Aggregations
 	terms, _ := aggregations.Terms("search")
 	//拿去聚合数据
 	var franks []model.Frank
 	for i := (param.PageNo - 1) * param.PageSize; i < len(terms.Buckets); i++ {
-		purchaseId := terms.Buckets[i].Key.(float64)
+		companyId := terms.Buckets[i].Key.(float64)
 		tradeNumber := terms.Buckets[i].DocCount
 		frank := model.Frank{
-			PurchaserId: int64(purchaseId),
+			CompanyId:   int64(companyId),
 			TradeNumber: tradeNumber,
 		}
 		for k, v := range terms.Buckets[i].Aggregations {
@@ -641,42 +678,50 @@ var GroupHistory = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	}
 
 	//获取详细信息
+	search := client.Search().Index("trade").Type("frank")
+	search = search.Sort("FrankTime", false).From(0).Size(1)
+	search = search.RequestCache(true)
 	for i := 0; i < len(franks); i++ {
-		search := client.Search().Index("trade").Type("frank")
-		query := elastic.NewBoolQuery()
-		query.QueryName("frankDetail")
+		queryDeatil := elastic.NewBoolQuery()
+		queryDeatil.QueryName("frankDetail")
 		if param.CompanyType == 0 {
-			query = query.Must(elastic.NewTermQuery("SupplierId", franks[i].PurchaserId))
+			queryDeatil = queryDeatil.Must(elastic.NewTermQuery("SupplierId", franks[i].CompanyId))
 		} else {
-			query = query.Must(elastic.NewTermQuery("PurchaserId", franks[i].PurchaserId))
+			queryDeatil = queryDeatil.Must(elastic.NewTermQuery("PurchaserId", franks[i].CompanyId))
 		}
 		if param.ProKey != "" {
-			query = query.Must(elastic.NewMatchQuery("ProDesc", param.ProKey))
+			queryDeatil = queryDeatil.Must(elastic.NewMatchQuery("ProDesc", param.ProKey))
 		}
-		search.Query(query).Sort("FrankTime", false).From(0).Size(1)
-		search.RequestCache(true)
+		//search.Query(query).Sort("FrankTime", false).From(0).Size(1)
+		search.Query(queryDeatil)
 		res, _ := search.Do(GroupHistoryCtx)
 		var frank model.Frank
 		detail := res.Hits.Hits[0].Source
 		jsonObject, _ := detail.MarshalJSON()
-		json.Unmarshal(jsonObject, &frank)
-		franks[i].Purchaser = frank.Purchaser
+		jsoniter.Unmarshal(jsonObject, &frank)
+		if param.CompanyType == 0 {
+			franks[i].CompanyName = frank.Supplier
+			franks[i].CompanyId = frank.SupplierId
+			franks[i].CompanyAddress = frank.SupplierAddress
+		} else {
+			franks[i].CompanyName = frank.Purchaser
+			franks[i].CompanyId = frank.PurchaserId
+			franks[i].CompanyAddress = frank.PurchaserAddress
+		}
 		franks[i].FrankTime = frank.FrankTime
+		franks[i].ProductName = frank.ProductName
 		franks[i].QiyunPort = frank.QiyunPort
 		franks[i].OrderId = frank.OrderId
 		franks[i].ProDesc = frank.ProDesc
-		franks[i].Supplier = frank.Supplier
 		franks[i].OriginalCountry = frank.OriginalCountry
 		franks[i].MudiPort = frank.MudiPort
-		franks[i].PurchaserAddress = frank.PurchaserAddress
 		franks[i].OrderNo = frank.OrderNo
 		franks[i].SupplierId = frank.SupplierId
-		franks[i].SupplierAddress = frank.SupplierAddress
 		franks[i].ProKey = frank.ProKey
 	}
 	response := model.Response{
 		List:  franks,
-		Total: res.Hits.TotalHits,
+		Total: int64(*resCardinality.Value),
 		Code:  0,
 	}
 	return ctx.JSON(200, response)
@@ -734,11 +779,79 @@ var NewTenFrank = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		var frank model.Frank
 		jsonObject, _ := detail.MarshalJSON()
 		jsoniter.Unmarshal(jsonObject, &frank)
+		if param.CompanyType == 0 {
+			frank.CompanyName = frank.Purchaser
+			frank.CompanyId = frank.PurchaserId
+			frank.CompanyAddress = frank.PurchaserAddress
+		} else {
+			frank.CompanyName = frank.Supplier
+			frank.CompanyId = frank.SupplierId
+			frank.CompanyAddress = frank.SupplierAddress
+		}
 		franks = append(franks, frank)
 	}
 	return ctx.JSON(200, model.Response{
 		List: franks,
 		Code: 0,
+	})
+})
+
+//与供应商的最近一年交易情况
+//参数 供应商id 采购商id 参数proKey
+var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
+	var (
+		infoDetailCtx context.Context
+		cancel        context.CancelFunc
+	)
+	var param detailQuery
+	err := ctx.BindJSON(&param)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if param.TimeOut != 0 {
+		infoDetailCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
+	} else {
+		infoDetailCtx, cancel = context.WithCancel(context.Background())
+	}
+	defer cancel()
+	client := constants.Instance()
+	InfoDetailSearch := client.Search().Index("trade").Type("frank")
+	query := elastic.NewBoolQuery()
+	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
+	query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
+	if param.CompanyType == 0 {
+		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
+		query = query.Must(elastic.NewTermQuery("SupplierId", param.LinkedCompanyId))
+	} else {
+		query = query.Must(elastic.NewTermQuery("PurchaserId", param.LinkedCompanyId))
+		query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyId))
+	}
+	from := (param.PageNo - 1) * param.PageSize
+	res, err := InfoDetailSearch.Query(query).From(from).Size(param.PageSize).Do(infoDetailCtx)
+	if err != nil {
+		fmt.Println(err)
+	}
+	var franks []model.Frank
+	for i := 0; i < len(res.Hits.Hits); i++ {
+		detail := res.Hits.Hits[i].Source
+		var frank model.Frank
+		jsonObject, _ := detail.MarshalJSON()
+		jsoniter.Unmarshal(jsonObject, &frank)
+		if param.CompanyType == 0 {
+			frank.CompanyName = frank.Purchaser
+			frank.CompanyId = frank.PurchaserId
+			frank.CompanyAddress = frank.PurchaserAddress
+		} else {
+			frank.CompanyName = frank.Supplier
+			frank.CompanyId = frank.SupplierId
+			frank.CompanyAddress = frank.SupplierAddress
+		}
+		franks = append(franks, frank)
+	}
+	return ctx.JSON(200, model.Response{
+		List:  franks,
+		Code:  0,
+		Total: res.Hits.TotalHits,
 	})
 })
 

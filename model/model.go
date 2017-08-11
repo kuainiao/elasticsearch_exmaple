@@ -78,9 +78,11 @@ type Frank struct {
 	OrderVolume      float64  `json:"OrderVolume"`
 	QiyunPort        string   `json:"QiyunPort"`
 	TradeNumber      int64    `json:"TradeNumber"`
-	CompanyName string `json:"company_name"`
-	CompanyId int64 `json:"company_id"`
+	ProductName      string   `json:"ProductName"`
+	CompanyName      string   `json:"company_name"`
+	CompanyId        int64    `json:"company_id"`
 	Score            int      `json:"score"`
+	CompanyAddress   string   `json:"company_address"`
 }
 
 type Product struct {

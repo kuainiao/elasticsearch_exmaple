@@ -6,6 +6,7 @@ import (
 	"os"
     elastic "gopkg.in/olivere/elastic.v5"
 	"sync"
+	"fmt"
 )
 
 /**
@@ -25,13 +26,18 @@ var es *elastic.Client
 var once sync.Once
 //single
 func Instance() *elastic.Client {
-	once.Do(func() {
-			client, _ := elastic.NewClient(
+	if es == nil {
+		once.Do(func() {
+			client, err := elastic.NewClient(
 				elastic.SetURL("http://"+es_host+":9200"),
 				elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)),
 				elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)),
 				elastic.SetTraceLog(log.New(os.Stderr, "[[ELASTIC]]", 0)))
+			if err != nil {
+				fmt.Println(err)
+			}
 			es = client
-	})
+		})
+	}
 	return es
 }
