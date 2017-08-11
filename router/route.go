@@ -10,7 +10,8 @@ import (
 func Route(frame *faygo.Framework) {
 	frame.Route(
 		frame.NewGroup("/frank",
-			frame.NewPOST("/DetailList.go", &handler.FrankDetail),
+		    frame.NewPUT("/DetailList.go").Use(middleware.CrossOrigin),
+			frame.NewPOST("/DetailList.go", &handler.FrankDetail).Use(middleware.CrossOrigin),
 
 			frame.NewOPTIONS("/search.go").Use(middleware.CrossOrigin),
 			frame.NewPOST("/search.go", &handler.Search).Use(middleware.CrossOrigin),
