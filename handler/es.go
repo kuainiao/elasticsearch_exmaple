@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/henrylee2cn/faygo"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/zhangweilun/tradeweb/constants"
 	"github.com/zhangweilun/tradeweb/model"
 	util "github.com/zhangweilun/tradeweb/util"
 	elastic "gopkg.in/olivere/elastic.v5"
-	"log"
-	"strconv"
-	"strings"
-	"time"
 )
 
 /**
@@ -213,6 +214,13 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		if param.ProKey != "" {
 			fmt.Println(hight["ProDesc"][0])
 			franks[i].ProDesc = hight["ProDesc"][0]
+		}
+		if param.CompanyName != "" {
+			if param.CompanyType == 0 {
+				franks[i].CompanyName = highlight["Purchaser"][0]
+			} else {
+				franks[i].CompanyName = highlight["Supplier"][0]
+			}
 		}
 	}
 	response := model.Response{
