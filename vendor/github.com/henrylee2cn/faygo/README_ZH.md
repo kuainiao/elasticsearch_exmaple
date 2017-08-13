@@ -292,17 +292,20 @@ addrs                  = 0.0.0.0:80|0.0.0.0:443  # 多个监听地址列表
 tls_certfile           =                         # TLS证书文件路径
 tls_keyfile            =                         # TLS密钥文件路径
 letsencrypt_dir        =                         # Let's Encrypt TLS证书缓存目录
-unix_filemode          = 438                     # UNIX listener的文件权限（438即0666）
+unix_filemode          = 0666                    # UNIX listener的文件权限，要求使用八进制
 read_timeout           = 0s                      # 读取请求数据超时；ns|µs|ms|s|m|h
 write_timeout          = 0s                      # 写入响应数据超时；ns|µs|ms|s|m|h
 multipart_maxmemory_mb = 32                      # 接收上传文件时允许使用的最大内存
-slow_response_threshold = 0s                     # 当响应时长 > slow_response_threshold时, 日志级别调整为 'WARNING'；0 表示不限；ns|µs|ms|s|m|h
+slow_response_threshold= 0s                      # 当响应时长 > slow_response_threshold时, 日志级别调整为 'WARNING'；0 表示不限；ns|µs|ms|s|m|h
+print_body             = false                   # 以JSON格式打印表单请求的body，其它类型请求原样打印body
 
 [router]                                         # 路由配置区
 redirect_trailing_slash   = true                 # 当前请求的URL含`/`后缀如`/foo/`且相应路由不存在时，如存在`/foo`，则自动跳转至`/foo`
 redirect_fixed_path       = true                 # 自动修复URL，如`/FOO` `/..//Foo`均被跳转至`/foo`（依赖redirect_trailing_slash=true）
 handle_method_not_allowed = true                 # 若开启，当前请求方法不存在时返回405，否则返回404
 handle_options            = true                 # 若开启，自动应答OPTIONS类请求，可在Faygo中设置默认Handler
+default_upload            = true                 # 自动注册默认静态路由: /upload/*filepath
+default_static            = true                 # 自动注册默认静态路由: /static/*filepath
 
 [xsrf]                                           # XSRF跨站请求伪造过滤配置区
 enable        = false                            # 是否开启
@@ -425,6 +428,16 @@ float64 |  []float64 |
 [任务工具](https://github.com/henrylee2cn/faygo/raw/master/ext/task)          | `github.com/henrylee2cn/faygo/ext/task`
 [HTTP客户端](https://github.com/henrylee2cn/faygo/raw/master/ext/surfer)      | `github.com/henrylee2cn/faygo/ext/surfer`
 
+## 已知案例
+
+产品名称          | Web/App 服务器 | 主页
+-----------------|---------------|-----------------
+盯房              | App           | https://www.df-house.com
+e交易             | App           | https://fir.im/ejy
+Seven A Jewelry  | Web           | http://sevenajewelry.com
+玩付              | App           | https://fir.im/eqb
+
+*注：按拼音字母排序*
 
 ## 开源协议
 

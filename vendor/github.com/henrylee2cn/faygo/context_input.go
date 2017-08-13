@@ -36,7 +36,6 @@ import (
 	"strings"
 
 	"github.com/henrylee2cn/faygo/apiware"
-	"github.com/henrylee2cn/faygo/utils"
 )
 
 // Regexes for checking the accept headers
@@ -267,6 +266,11 @@ func (ctx *Context) DataAll() map[interface{}]interface{} {
 // This data are only available in this context.
 func (ctx *Context) SetData(key, val interface{}) {
 	ctx.data[key] = val
+}
+
+// Del delete data by key.
+func (ctx *Context) Del(key interface{}) {
+	delete(ctx.data, key)
 }
 
 // Param returns the first value for the kinds of parameters.
@@ -561,7 +565,7 @@ func (ctx *Context) SaveFile(key string, cover bool, newfname ...string) (savedF
 	// If the file with the same name exists, add the suffix of the serial number
 	idx := strings.LastIndex(fullname, filepath.Ext(fullname))
 	_fullname := fullname
-	for i := 2; utils.FileExists(_fullname) && !cover; i++ {
+	for i := 2; FileExists(_fullname) && !cover; i++ {
 		_fullname = fmt.Sprintf("%s(%d)%s", fullname[:idx], i, fullname[idx:])
 	}
 	fullname = _fullname
@@ -637,7 +641,7 @@ func (ctx *Context) SaveFiles(key string, cover bool, newfname ...string) (saved
 		if num >= 2 {
 			_fullname = fmt.Sprintf("%s(%d)%s", fullname[:idx], num, fullname[idx:])
 		}
-		for utils.FileExists(_fullname) && !cover {
+		for FileExists(_fullname) && !cover {
 			num++
 			_fullname = fmt.Sprintf("%s(%d)%s", fullname[:idx], num, fullname[idx:])
 		}
@@ -703,8 +707,12 @@ func (ctx *Context) BindXML(xmlObject interface{}) error {
 	return xml.Unmarshal(rawData, &xmlObject)
 }
 
-// BodyBytes returns the raw request body data as bytes.
-func (ctx *Context) BodyBytes() []byte {
+// LimitedBodyBytes returns the raw request body data as bytes.
+// Note:
+//  1.limited by maximum length;
+//  2.if frame.config.PrintBody==false and ctx.R.Body is readed, returns nil;
+//  3.if ctx.IsUpload()==true and ctx.R.Body is readed, returns nil.
+func (ctx *Context) LimitedBodyBytes() []byte {
 	if ctx.limitedRequestBody != nil {
 		return ctx.limitedRequestBody
 	}
@@ -713,10 +721,9 @@ func (ctx *Context) BodyBytes() []byte {
 		return ctx.limitedRequestBody
 	}
 	safe := &io.LimitedReader{R: ctx.R.Body, N: ctx.frame.config.multipartMaxMemory}
-	limitedRequestBody, _ := ioutil.ReadAll(safe)
-	ctx.R.Body.Close()
-	bf := bytes.NewBuffer(limitedRequestBody)
-	ctx.R.Body = ioutil.NopCloser(bf)
-	ctx.limitedRequestBody = limitedRequestBody
-	return limitedRequestBody
+	buf := bytes.NewBuffer(make([]byte, 0, bytes.MinRead))
+	buf.ReadFrom(safe)
+	ctx.limitedRequestBody = buf.Bytes()
+	ctx.R.Body = ioutil.NopCloser(io.MultiReader(buf, ctx.R.Body))
+	return ctx.limitedRequestBody
 }

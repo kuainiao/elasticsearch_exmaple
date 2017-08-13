@@ -29,7 +29,6 @@ import (
 	"github.com/henrylee2cn/faygo/logging/color"
 	"github.com/henrylee2cn/faygo/session"
 	"github.com/henrylee2cn/faygo/swagger"
-	"github.com/henrylee2cn/faygo/utils"
 )
 
 // Framework is the faygo web framework.
@@ -125,7 +124,6 @@ func newFramework(name string, version ...string) *Framework {
 	frame.initSysLogger()
 	frame.initBizLogger()
 	frame.MuxAPI = newMuxAPI(frame, "root", "", "/")
-
 	addFrame(frame)
 	return frame
 }
@@ -242,7 +240,7 @@ func (frame *Framework) build() {
 				tlsCertFile:     frame.config.TLSCertFile,
 				tlsKeyFile:      frame.config.TLSKeyFile,
 				letsencryptDir:  frame.config.LetsencryptDir,
-				unixFileMode:    frame.config.UNIXFileMode,
+				unixFileMode:    frame.config.unixFileMode,
 				Server: &http.Server{
 					Addr:         frame.config.Addrs[i],
 					Handler:      frame,
@@ -451,7 +449,7 @@ func (frame *Framework) presetSystemMuxes() {
 		}
 	}
 	// When does not have a custom route, the route is automatically created.
-	if !hadUpload {
+	if !hadUpload && frame.config.Router.DefaultUpload {
 		frame.MuxAPI.NamedStatic(
 			"Directory for uploading files",
 			"/upload/",
@@ -460,7 +458,7 @@ func (frame *Framework) presetSystemMuxes() {
 			global.upload.nocache,
 		).Use(global.upload.handlers...)
 	}
-	if !hadStatic {
+	if !hadStatic && frame.config.Router.DefaultStatic {
 		frame.MuxAPI.NamedStatic(
 			"Directory for public static files",
 			"/static/",
@@ -511,6 +509,7 @@ func (frame *Framework) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if u == "" {
 		u = "/"
 	}
+
 	frame.serveHTTP(ctx)
 	var n = ctx.Status()
 	var code string
@@ -526,9 +525,9 @@ func (frame *Framework) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	cost := time.Since(start)
 	if cost < frame.config.slowResponseThreshold {
-		frame.syslog.Infof("[I] %15s %7s  %3s %10d %12s %-30s | ", ctx.RealIP(), method, code, ctx.Size(), cost, u)
+		frame.syslog.Infof("[I] %15s %7s  %3s %10d %12s %-30s | %s", ctx.RealIP(), method, code, ctx.Size(), cost, u, ctx.recordBody())
 	} else {
-		frame.syslog.Warningf(color.Yellow("[W]")+" %15s %7s  %3s %10d %12s(slow) %-30s | ", ctx.RealIP(), method, code, ctx.Size(), cost, u)
+		frame.syslog.Warningf(color.Yellow("[W]")+" %15s %7s  %3s %10d %12s(slow) %-30s | %s", ctx.RealIP(), method, code, ctx.Size(), cost, u, ctx.recordBody())
 	}
 }
 
@@ -563,7 +562,7 @@ func (frame *Framework) serveHTTP(ctx *Context) {
 			// Try to fix the request path
 			if frame.redirectFixedPath {
 				fixedPath, found := root.findCaseInsensitivePath(
-					utils.CleanPath(path),
+					CleanToURL(path),
 					frame.redirectTrailingSlash,
 				)
 				if found {

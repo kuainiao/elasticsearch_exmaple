@@ -15,9 +15,11 @@
 package faygo
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"mime/multipart"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -26,7 +28,6 @@ import (
 
 	"github.com/henrylee2cn/faygo/logging"
 	"github.com/henrylee2cn/faygo/session"
-	"github.com/henrylee2cn/faygo/utils"
 )
 
 // Headers
@@ -120,7 +121,7 @@ type (
 	Context struct {
 		R                  *http.Request // the *http.Request
 		W                  *Response     // the *Response cooked by the http.ResponseWriter
-		CruSession         session.Store
+		CurSession         session.Store
 		limitedRequestBody []byte // the copy of requset body(Limited by maximum length)
 		frame              *Framework
 		handlerChain       HandlerChain                // keep track all registed handlers
@@ -150,7 +151,7 @@ func (ctx *Context) XSRFToken(specifiedExpiration ...int) string {
 		token, ok := ctx.SecureCookieParam(ctx.frame.config.XSRF.Key, "_xsrf")
 		if !ok {
 			ctx._xsrfTokenReset = true
-			token = utils.RandomString(32)
+			token = RandomString(32)
 			if len(specifiedExpiration) > 0 && specifiedExpiration[0] > 0 {
 				ctx.xsrfExpire = specifiedExpiration[0]
 			} else if ctx.xsrfExpire == 0 {
@@ -197,28 +198,28 @@ var errNotEnableSession = errors.New("before using the session, must set config 
 
 // StartSession starts session and load old session data info this controller.
 func (ctx *Context) StartSession() (session.Store, error) {
-	if ctx.CruSession != nil {
-		return ctx.CruSession, nil
+	if ctx.CurSession != nil {
+		return ctx.CurSession, nil
 	}
 	if !ctx.enableSession {
 		return nil, errNotEnableSession
 	}
 	var err error
-	ctx.CruSession, err = ctx.frame.sessionManager.SessionStart(ctx.W, ctx.R)
-	return ctx.CruSession, err
+	ctx.CurSession, err = ctx.frame.sessionManager.SessionStart(ctx.W, ctx.R)
+	return ctx.CurSession, err
 }
 
 // GetSessionStore return SessionStore.
 func (ctx *Context) GetSessionStore() (session.Store, error) {
-	if ctx.CruSession != nil {
-		return ctx.CruSession, nil
+	if ctx.CurSession != nil {
+		return ctx.CurSession, nil
 	}
 	if !ctx.enableSession {
 		return nil, errNotEnableSession
 	}
 	var err error
-	ctx.CruSession, err = ctx.frame.sessionManager.GetSessionStore(ctx.W, ctx.R)
-	return ctx.CruSession, err
+	ctx.CurSession, err = ctx.frame.sessionManager.GetSessionStore(ctx.W, ctx.R)
+	return ctx.CurSession, err
 }
 
 // SetSession puts value into session.
@@ -227,7 +228,7 @@ func (ctx *Context) SetSession(key interface{}, value interface{}) {
 		ctx.Log().Warning(err.Error())
 		return
 	}
-	ctx.CruSession.Set(key, value)
+	ctx.CurSession.Set(key, value)
 }
 
 // GetSession gets value from session.
@@ -236,7 +237,7 @@ func (ctx *Context) GetSession(key interface{}) interface{} {
 		ctx.Log().Debug(err.Error())
 		return nil
 	}
-	return ctx.CruSession.Get(key)
+	return ctx.CurSession.Get(key)
 }
 
 // DelSession removes value from session.
@@ -245,7 +246,7 @@ func (ctx *Context) DelSession(key interface{}) {
 		ctx.Log().Debug(err.Error())
 		return
 	}
-	ctx.CruSession.Delete(key)
+	ctx.CurSession.Delete(key)
 }
 
 // SessionRegenerateID regenerates session id for this session.
@@ -255,8 +256,8 @@ func (ctx *Context) SessionRegenerateID() {
 		ctx.Log().Debug(err.Error())
 		return
 	}
-	ctx.CruSession.SessionRelease(ctx.W)
-	ctx.CruSession = ctx.frame.sessionManager.SessionRegenerateID(ctx.W, ctx.R)
+	ctx.CurSession.SessionRelease(ctx.W)
+	ctx.CurSession = ctx.frame.sessionManager.SessionRegenerateID(ctx.W, ctx.R)
 }
 
 // DestroySession cleans session data and session cookie.
@@ -265,8 +266,8 @@ func (ctx *Context) DestroySession() {
 		ctx.Log().Debug(err.Error())
 		return
 	}
-	ctx.CruSession.Flush()
-	ctx.CruSession = nil
+	ctx.CurSession.Flush()
+	ctx.CurSession = nil
 	ctx.frame.sessionManager.SessionDestroy(ctx.W, ctx.R)
 }
 
@@ -390,29 +391,10 @@ func (ctx *Context) Next() {
 	ctx.pos++
 	//run the next
 	if ctx.pos < ctx.handlerChainLen {
-		switch h := ctx.handlerChain[ctx.pos].(type) {
-		case *apiHandler:
-			h = h.new()
-			err := h.bind(ctx.R, ctx.pathParams)
-			defer h.reset()
-			if err != nil {
-				global.binderrorFunc(ctx, err)
-				ctx.Stop()
-				return
-			}
-			err = h.Serve(ctx)
-			if err != nil {
-				global.errorFunc(ctx, err.Error(), http.StatusInternalServerError)
-				ctx.Stop()
-				return
-			}
-		default:
-			err := h.Serve(ctx)
-			if err != nil {
-				global.errorFunc(ctx, err.Error(), http.StatusInternalServerError)
-				ctx.Stop()
-				return
-			}
+		if err := ctx.handlerChain[ctx.pos].Serve(ctx); err != nil {
+			global.errorFunc(ctx, err.Error(), http.StatusInternalServerError)
+			ctx.Stop()
+			return
 		}
 		// If the next one exists, it is executed automatically.
 		ctx.Next()
@@ -426,9 +408,9 @@ func (ctx *Context) beforeWriteHeader() {
 		ctx.SetSecureCookie(ctx.frame.config.XSRF.Key, "_xsrf", ctx._xsrfToken, ctx.xsrfExpire)
 	}
 	if ctx.enableSession {
-		if ctx.CruSession != nil {
-			ctx.CruSession.SessionRelease(ctx.W)
-			ctx.CruSession = nil
+		if ctx.CurSession != nil {
+			ctx.CurSession.SessionRelease(ctx.W)
+			ctx.CurSession = nil
 		}
 	}
 }
@@ -448,29 +430,48 @@ func (ctx *Context) IsBreak() bool {
 	return ctx.pos == stopExecutionposition
 }
 
-/*
-// reset ctx.
-// Note: Never reset `ctx.frame`, `ctx.W`, `ctx.enableGzip`, `ctx.enableSession` and `ctx.enableXSRF`!
-func (ctx *Context) reset(w http.ResponseWriter, r *http.Request) {
-	ctx.limitedRequestBody = nil
-	ctx.data = nil
-	ctx.queryParams = nil
-	ctx._xsrfToken = ""
-	ctx._xsrfTokenReset = false
-	ctx.W.reset(w)
-	ctx.R = r
+func (ctx *Context) recordBody() []byte {
+	if !ctx.frame.config.PrintBody {
+		return nil
+	}
+	var b []byte
+	formValues := ctx.FormParamAll()
+	if len(formValues) > 0 || ctx.IsUpload() {
+		v := multipart.Form{
+			Value: formValues,
+		}
+		if ctx.R.MultipartForm != nil {
+			v.File = ctx.R.MultipartForm.File
+		}
+		b, _ = json.Marshal(v)
+	} else {
+		b = ctx.LimitedBodyBytes()
+	}
+	if len(b) > 0 {
+		bb := make([]byte, len(b)+2)
+		bb[0] = '\n'
+		copy(bb[1:], b)
+		bb[len(bb)-1] = '\n'
+		return bb
+	}
+	return b
 }
-*/
 
 func (frame *Framework) getContext(w http.ResponseWriter, r *http.Request) *Context {
 	ctx := frame.contextPool.Get().(*Context)
 	ctx.R = r
 	ctx.W.reset(w)
 	ctx.data = make(map[interface{}]interface{})
+	if frame.config.PrintBody && !ctx.IsUpload() {
+		ctx.LimitedBodyBytes()
+	}
 	return ctx
 }
 
 func (frame *Framework) putContext(ctx *Context) {
+	if ctx.R.Body != nil {
+		ctx.R.Body.Close()
+	}
 	ctx.R = nil
 	ctx.W.writer = nil
 	ctx.limitedRequestBody = nil
