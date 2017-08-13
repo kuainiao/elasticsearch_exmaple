@@ -357,7 +357,10 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 // CompanyRelations ... 详情
 //公司关系图
 //传入参数proKey 公司id 公司类型
-//去重还未完成
+//https://elasticsearch.cn/article/132
+//	b := NewCollapseBuilder("user").
+//InnerHit(NewInnerHit().Name("last_tweets").Size(5).Sort("date", true)).
+//MaxConcurrentGroupRequests(4)
 var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var (
 		CompanyRelationsCtx context.Context
