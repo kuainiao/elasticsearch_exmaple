@@ -360,7 +360,7 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 //https://elasticsearch.cn/article/132
 //	b := NewCollapseBuilder("user").
 //InnerHit(NewInnerHit().Name("last_tweets").Size(5).Sort("date", true)).
-//MaxConcurrentGroupRequests(4)
+//MaxConcurrentGroupRequests(4) 去重查询
 var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var (
 		CompanyRelationsCtx context.Context
