@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/henrylee2cn/faygo"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/zhangweilun/tradeweb/constants"
 	"github.com/zhangweilun/tradeweb/model"
 	util "github.com/zhangweilun/tradeweb/util"
 	elastic "gopkg.in/olivere/elastic.v5"
-	"log"
-	"strconv"
-	"strings"
-	"time"
 )
 
 /**
@@ -168,6 +169,8 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	}
 
 	//获取详细信息
+	//fsc := NewFetchSourceContext(true).Include("title")
+	//agg := NewTopHitsAggregation().
 	for i := 0; i < len(franks); i++ {
 		search := client.Search().Index("trade").Type("frank")
 		query := elastic.NewBoolQuery()
@@ -214,6 +217,13 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 			fmt.Println(hight["ProDesc"][0])
 			franks[i].ProDesc = hight["ProDesc"][0]
 		}
+		if param.CompanyName != "" {
+			if param.CompanyType == 0 {
+				franks[i].CompanyName = hight["Purchaser"][0]
+			} else {
+				franks[i].CompanyName = hight["Supplier"][0]
+			}
+		}
 	}
 	response := model.Response{
 		List:  franks,
@@ -225,6 +235,7 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 
 })
 
+//FrankDetail ...
 //首页
 //搜索提单
 var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
@@ -294,7 +305,7 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	return ctx.JSON(200, response)
 })
 
-// TopTenProduct... 详情
+// TopTenProduct ... 详情
 //top10饼图和中间的商品名称 all product由前端展示
 //传入参数公司id 公司类型
 // status: ok
@@ -346,7 +357,10 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 // CompanyRelations ... 详情
 //公司关系图
 //传入参数proKey 公司id 公司类型
-//去重还未完成
+//https://elasticsearch.cn/article/132
+//	b := NewCollapseBuilder("user").
+//InnerHit(NewInnerHit().Name("last_tweets").Size(5).Sort("date", true)).
+//MaxConcurrentGroupRequests(4) 去重查询
 var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var (
 		CompanyRelationsCtx context.Context
@@ -363,6 +377,7 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		CompanyRelationsCtx, cancel = context.WithCancel(context.Background())
 	}
 	defer cancel()
+	//companyName待查
 	relationship := model.Relationship{
 		CompanyId:   param.CompanyId,
 		CompanyName: param.CompanyName,
@@ -370,10 +385,8 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	client := constants.Instance()
 	CompanyRelationsSearch := client.Search().Index("trade").Type("frank")
 	query := elastic.NewBoolQuery()
-	highlight := elastic.NewHighlight()
 	if param.ProKey != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-		highlight.Field("ProDesc")
 	}
 	if param.CompanyType == 0 {
 		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
@@ -390,23 +403,24 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	//一级 采购
 	if param.CompanyType == 0 {
 		//去重
-		levelOne := make(map[string]int64)
-		//levelTwo := make(map[string]int64)
-		//levelThree := make(map[string]int64)
+		levelOne := make(map[int64]string)
 		for i := 0; i < len(res.Hits.Hits); i++ {
 			detail := res.Hits.Hits[i].Source
 			var frank model.Frank
 			jsonObject, _ := detail.MarshalJSON()
 			jsoniter.Unmarshal(jsonObject, &frank)
-			levelOne[frank.Supplier] = frank.SupplierId
+			levelOne[frank.SupplierId] = frank.Supplier
 		}
+		fmt.Println(levelOne)
 		for k, v := range levelOne {
-			relationship.Partner = append(relationship.Partner, model.Relationship{v, k, nil})
+			relationship.Partner = append(relationship.Partner, model.Relationship{k, v, nil})
 		}
-
+		for k := range levelOne {
+			delete(levelOne, k)
+		}
 		//查采购 二级
 		serviceTwo := client.Search().Index("trade").Type("frank")
-		serviceTwo.Size(1).Sort("FrankTime", false)
+		serviceTwo.Size(10).Sort("FrankTime", false)
 		for j := 0; j < len(relationship.Partner); j++ {
 			query := elastic.NewBoolQuery()
 			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
@@ -416,16 +430,23 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 			if err != nil {
 				fmt.Println(err)
 			}
-			detail := res.Hits.Hits[0].Source
-			var frank model.Frank
-			jsonObject, _ := detail.MarshalJSON()
-			jsoniter.Unmarshal(jsonObject, &frank)
-			relationship.Partner[j].Partner = append(relationship.Partner[j].Partner, model.Relationship{frank.PurchaserId, frank.Purchaser, nil})
-
+			for i := 0; i < len(res.Hits.Hits); i++ {
+				detail := res.Hits.Hits[i].Source
+				var frank model.Frank
+				jsonObject, _ := detail.MarshalJSON()
+				jsoniter.Unmarshal(jsonObject, &frank)
+				levelOne[frank.SupplierId] = frank.Supplier
+			}
+			for k, v := range levelOne {
+				relationship.Partner[j].Partner = append(relationship.Partner[j].Partner, model.Relationship{k, v, nil})
+			}
+			for k := range levelOne {
+				delete(levelOne, k)
+			}
 		}
 		//查供应商 三级
 		serviceThree := client.Search().Index("trade").Type("frank")
-		serviceThree = serviceThree.Size(1).Sort("FrankTime", false)
+		serviceThree = serviceThree.Size(10).Sort("FrankTime", false)
 		for j := 0; j < len(relationship.Partner); j++ {
 			for i := 0; i < len(relationship.Partner[j].Partner); i++ {
 				query := elastic.NewBoolQuery()
@@ -436,11 +457,17 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 				if err != nil {
 					fmt.Println(err)
 				}
-				detail := res.Hits.Hits[0].Source
-				var frank model.Frank
-				jsonObject, _ := detail.MarshalJSON()
-				jsoniter.Unmarshal(jsonObject, &frank)
-				relationship.Partner[j].Partner[i].Partner = append(relationship.Partner[j].Partner[i].Partner, model.Relationship{frank.SupplierId, frank.Supplier, nil})
+				for i := 0; i < len(res.Hits.Hits); i++ {
+					detail := res.Hits.Hits[i].Source
+					var frank model.Frank
+					jsonObject, _ := detail.MarshalJSON()
+					jsoniter.Unmarshal(jsonObject, &frank)
+					levelOne[frank.SupplierId] = frank.Supplier
+				}
+				for k, v := range levelOne {
+					relationship.Partner[j].Partner[i].Partner = append(relationship.Partner[j].Partner[i].Partner,
+						model.Relationship{k, v, nil})
+				}
 			}
 		}
 
@@ -532,7 +559,7 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	})
 })
 
-// GroupHistory... 详情
+// GroupHistory ... 详情
 //Nearly a year of trading history
 //通过proKey相关的公司的近一年的交易记录 如果是采购上进来 先查prokey 再通过group supplier分组来处理
 //传入 参数 proKey 公司ID 公司类型

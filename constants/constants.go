@@ -1,40 +1,44 @@
 package constants
 
 import (
-
 	"log"
 	"os"
-    elastic "gopkg.in/olivere/elastic.v5"
 	"sync"
-	"fmt"
+
+	elastic "gopkg.in/olivere/elastic.v5"
 )
 
 /**
-* 
+*
 * @author willian
 * @created 2017-07-27 17:44
-* @email 18702515157@163.com  
+* @email 18702515157@163.com
 **/
 
 const (
-	es_host = "192.168.1.114"
+	esHost = "es.g2l-service.com"
+	//esHost = "192.168.1.114:9200"
 	//DateFormat = "2006-01-02 15:04:05"
 	DateFormat = "2006-01-02"
 )
 
 var es *elastic.Client
 var once sync.Once
-//single
+
+//Instance ...
 func Instance() *elastic.Client {
 	if es == nil {
 		once.Do(func() {
 			client, err := elastic.NewClient(
-				elastic.SetURL("http://"+es_host+":9200"),
+				elastic.SetURL("http://"+esHost),
 				elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)),
 				elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)),
-				elastic.SetTraceLog(log.New(os.Stderr, "[[ELASTIC]]", 0)))
+				// elastic.SetTraceLog(log.New(os.Stderr, "[[ELASTIC]]", 0)),
+				elastic.SetBasicAuth("admin", "4Dm1n.3s"),
+				elastic.SetSniff(false),
+			)
 			if err != nil {
-				fmt.Println(err)
+				panic(err)
 			}
 			es = client
 		})
