@@ -33,7 +33,7 @@ func Instance() *elastic.Client {
 				elastic.SetURL("http://"+esHost),
 				elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)),
 				elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)),
-				// elastic.SetTraceLog(log.New(os.Stderr, "[[ELASTIC]]", 0)),
+				elastic.SetTraceLog(log.New(os.Stderr, "[[ELASTIC]]", 0)),
 				elastic.SetBasicAuth("admin", "4Dm1n.3s"),
 				elastic.SetSniff(false),
 			)

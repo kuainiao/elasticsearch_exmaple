@@ -54,6 +54,7 @@ type queryParam struct {
 	PurchaserId     int           `json:"purchaser_id"`
 }
 
+//Search ...
 //首页
 //产品描述或者公司名称搜索
 var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
@@ -175,13 +176,20 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		search := client.Search().Index("trade").Type("frank")
 		query := elastic.NewBoolQuery()
 		query.QueryName("frankDetail")
+		highlight := elastic.NewHighlight()
 		if param.CompanyType == 0 {
 			query = query.Must(elastic.NewTermQuery("PurchaserId", franks[i].CompanyId))
+			if param.CompanyName != "" {
+				query = query.Must(elastic.NewTermQuery("Purchaser", param.CompanyName))
+				highlight.Field("Purchaser")
+			}
 		} else {
 			query = query.Must(elastic.NewTermQuery("SupplierId", franks[i].CompanyId))
+			if param.CompanyName != "" {
+				query = query.Must(elastic.NewTermQuery("Supplier", param.CompanyName))
+				highlight.Field("Supplier")
+			}
 		}
-
-		highlight := elastic.NewHighlight()
 		highlight = highlight.PreTags(`<font color="#FF0000">`).PostTags("</font>")
 		if param.ProKey != "" {
 			query = query.Must(elastic.NewMatchQuery("ProDesc", param.ProKey))
@@ -385,88 +393,86 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	client := constants.Instance()
 	CompanyRelationsSearch := client.Search().Index("trade").Type("frank")
 	query := elastic.NewBoolQuery()
+	var collapse *elastic.CollapseBuilder
 	if param.ProKey != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
+
 	}
 	if param.CompanyType == 0 {
 		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
+		collapse = elastic.NewCollapseBuilder("SupplierId").
+			InnerHit(elastic.NewInnerHit().Name("SupplierId").Size(10).Sort("FrankTime", false)).
+			MaxConcurrentGroupRequests(4)
 	} else {
 		query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyId))
+		collapse = elastic.NewCollapseBuilder("PurchaserId").
+			InnerHit(elastic.NewInnerHit().Name("PurchaserId").Size(10).Sort("FrankTime", false)).
+			MaxConcurrentGroupRequests(4)
 	}
 	query = query.Boost(10)
 	query = query.DisableCoord(true)
 	query = query.QueryName("filter")
-	res, err := CompanyRelationsSearch.Query(query).Size(10).Sort("FrankTime", false).Do(CompanyRelationsCtx)
+	res, err := CompanyRelationsSearch.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
+	fmt.Println(collapse)
 	if err != nil {
 		log.Println(err)
 	}
 	//一级 采购
 	if param.CompanyType == 0 {
-		//去重
-		levelOne := make(map[int64]string)
+		//查供应商 一级
 		for i := 0; i < len(res.Hits.Hits); i++ {
 			detail := res.Hits.Hits[i].Source
 			var frank model.Frank
 			jsonObject, _ := detail.MarshalJSON()
 			jsoniter.Unmarshal(jsonObject, &frank)
-			levelOne[frank.SupplierId] = frank.Supplier
+			relationship.Partner = append(relationship.Partner, model.Relationship{
+				frank.SupplierId, frank.Supplier, nil})
 		}
-		fmt.Println(levelOne)
-		for k, v := range levelOne {
-			relationship.Partner = append(relationship.Partner, model.Relationship{k, v, nil})
-		}
-		for k := range levelOne {
-			delete(levelOne, k)
-		}
-		//查采购 二级
+		//查采购商 二级
 		serviceTwo := client.Search().Index("trade").Type("frank")
-		serviceTwo.Size(10).Sort("FrankTime", false)
-		for j := 0; j < len(relationship.Partner); j++ {
+		collapse = elastic.NewCollapseBuilder("PurchaserId").
+			InnerHit(elastic.NewInnerHit().Name("PurchaserId").Size(5).Sort("FrankTime", false)).
+			MaxConcurrentGroupRequests(4)
+		for i := 0; i < len(relationship.Partner); i++ {
 			query := elastic.NewBoolQuery()
 			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-			query = query.Must(elastic.NewTermQuery("SupplierId", relationship.Partner[j].CompanyId))
+			query = query.Must(elastic.NewTermQuery("SupplierId", relationship.Partner[i].CompanyId))
 			query = query.QueryName("filter")
-			res, err := serviceTwo.Query(query).Do(CompanyRelationsCtx)
+			res, err := serviceTwo.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
 			if err != nil {
 				fmt.Println(err)
 			}
-			for i := 0; i < len(res.Hits.Hits); i++ {
-				detail := res.Hits.Hits[i].Source
-				var frank model.Frank
+			for q := 0; q < len(res.Hits.Hits); q++ {
+				detail := res.Hits.Hits[q].Source
 				jsonObject, _ := detail.MarshalJSON()
+				var frank model.Frank
 				jsoniter.Unmarshal(jsonObject, &frank)
-				levelOne[frank.SupplierId] = frank.Supplier
-			}
-			for k, v := range levelOne {
-				relationship.Partner[j].Partner = append(relationship.Partner[j].Partner, model.Relationship{k, v, nil})
-			}
-			for k := range levelOne {
-				delete(levelOne, k)
+				relationship.Partner[i].Partner = append(relationship.Partner[i].Partner,
+					model.Relationship{frank.PurchaserId, frank.Purchaser, nil})
 			}
 		}
-		//查供应商 三级
+		//查供应商  三级
 		serviceThree := client.Search().Index("trade").Type("frank")
-		serviceThree = serviceThree.Size(10).Sort("FrankTime", false)
-		for j := 0; j < len(relationship.Partner); j++ {
-			for i := 0; i < len(relationship.Partner[j].Partner); i++ {
+		collapse = elastic.NewCollapseBuilder("SupplierId").
+			InnerHit(elastic.NewInnerHit().Name("SupplierId").Size(5).Sort("FrankTime", false)).
+			MaxConcurrentGroupRequests(4)
+		for i := 0; i < len(relationship.Partner); i++ {
+			for j := 0; j < len(relationship.Partner[i].Partner); j++ {
 				query := elastic.NewBoolQuery()
 				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[j].Partner[i].CompanyId))
+				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[i].CompanyId))
 				query = query.QueryName("filter")
-				res, err := serviceThree.Query(query).Do(CompanyRelationsCtx)
+				res, err := serviceThree.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
 				if err != nil {
 					fmt.Println(err)
 				}
-				for i := 0; i < len(res.Hits.Hits); i++ {
-					detail := res.Hits.Hits[i].Source
-					var frank model.Frank
+				for q := 0; q < len(res.Hits.Hits); q++ {
+					detail := res.Hits.Hits[q].Source
 					jsonObject, _ := detail.MarshalJSON()
+					var frank model.Frank
 					jsoniter.Unmarshal(jsonObject, &frank)
-					levelOne[frank.SupplierId] = frank.Supplier
-				}
-				for k, v := range levelOne {
-					relationship.Partner[j].Partner[i].Partner = append(relationship.Partner[j].Partner[i].Partner,
-						model.Relationship{k, v, nil})
+					relationship.Partner[i].Partner[j].Partner = append(relationship.Partner[i].Partner[j].Partner,
+						model.Relationship{frank.PurchaserId, frank.Purchaser, nil})
 				}
 			}
 		}
