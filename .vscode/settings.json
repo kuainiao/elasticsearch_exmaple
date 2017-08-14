@@ -2,7 +2,7 @@
     "go.formatOnSave": true,
     "go.formatTool": "goreturns",
     //"go.gopath": "C:\\Users\\william\\Destop\\tradeweb",
-    "go.gopath": "/Users/willian/go:/Users/willian/Desktop/project/go/tradeweb",
+    "go.gopath": "/Users/willian/Desktop/project/go/tradeweb",
     "go.inferGopath": true,
     "files.autoSave": "onFocusChange",
     "go.gocodeAutoBuild": true    

@@ -25,6 +25,11 @@ const (
 var es *elastic.Client
 var once sync.Once
 
+//StopWords ... es 停用词
+// var StopWords = []string{
+// 	"the", "a",
+// }
+
 //Instance ...
 func Instance() *elastic.Client {
 	if es == nil {

@@ -79,13 +79,6 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	query.QueryName("matchQuery")
 	if param.ProKey != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", param.ProKey))
-		//同义词
-		//words := util.Words()
-		//if len(words) != 0 {
-		//	for i := 0; i < len(words); i++ {
-		//		query = query.Must(elastic.NewMatchQuery("ProDesc", words[i]))
-		//	}
-		//}
 	}
 	countSearch := client.Search().Index("trade").Type("frank")
 	cardinality := elastic.NewCardinalityAggregation().Field("PurchaserId")
@@ -97,14 +90,15 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	if param.CompanyType == 0 {
 		agg.Field("PurchaserId")
 		if param.CompanyName != "" {
-			query = query.Must(elastic.NewTermQuery("Purchaser", param.CompanyName))
+			query = query.Must(elastic.NewMatchQuery("Purchaser", param.CompanyName))
 		}
 	} else {
 		agg.Field("SupplierId")
 		if param.CompanyName != "" {
-			query = query.Must(elastic.NewTermQuery("Supplier", param.CompanyName))
+			query = query.Must(elastic.NewMatchQuery("Supplier", param.CompanyName))
 		}
 	}
+	// query = query.MustNot(elastic.NewTermQuery("Supplier"), "UNBE")
 	search = search.Query(query)
 	//https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_filtering_values_with_partitions
 	//分页等分区处理
@@ -180,13 +174,13 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		if param.CompanyType == 0 {
 			query = query.Must(elastic.NewTermQuery("PurchaserId", franks[i].CompanyId))
 			if param.CompanyName != "" {
-				query = query.Must(elastic.NewTermQuery("Purchaser", param.CompanyName))
+				query = query.Must(elastic.NewMatchQuery("Purchaser", param.CompanyName))
 				highlight.Field("Purchaser")
 			}
 		} else {
 			query = query.Must(elastic.NewTermQuery("SupplierId", franks[i].CompanyId))
 			if param.CompanyName != "" {
-				query = query.Must(elastic.NewTermQuery("Supplier", param.CompanyName))
+				query = query.Must(elastic.NewMatchQuery("Supplier", param.CompanyName))
 				highlight.Field("Supplier")
 			}
 		}
@@ -795,7 +789,7 @@ var NewTenFrank = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	})
 })
 
-//与供应商的最近一年交易情况
+//InfoDetail ...
 //参数 供应商id 采购商id 参数proKey
 // status: ok
 var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
@@ -855,6 +849,12 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	})
 })
 
+//findSupplierTop10 ...
+//{"did":0,"pid":"15","dlevel":0,"ietype":0,"vwtype":0,"token":"user:3183b6956804427f91d7b624db09e547","userId":"1","date_type":2}
+var findSupplierTop10 = faygo.HandlerFunc(func(ctx *faygo.Context) error {
+	return nil
+})
+
 //首页产品搜索
 //包括全球产品出口柜量占比（国家）
 //包括全球产品进口柜量占比（国家）
@@ -888,6 +888,7 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 //	return nil
 //})
 
+//ProductList ...
 //首页
 //得到产品列表
 // 传入参数 prokey
