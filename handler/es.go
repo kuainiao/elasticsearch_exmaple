@@ -259,19 +259,29 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	client := constants.Instance()
 	search := client.Search().Index("trade").Type("frank")
 	query := elastic.NewBoolQuery()
+	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
+	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
 	highlight := elastic.NewHighlight()
 	if param.ProDesc != "" {
-		query = query.Must(elastic.NewTermQuery("ProDesc", param.ProDesc))
+		query = query.Must(elastic.NewMatchQuery("ProDesc", param.ProDesc))
 		highlight.Field("ProDesc")
 	}
 	if param.Supplier != "" {
-		query = query.Must(elastic.NewTermQuery("Supplier", param.Supplier))
+		query = query.Must(elastic.NewMatchQuery("Supplier", param.Supplier))
 		highlight.Field("Supplier")
 	}
 	if param.OriginalCountry != "" {
-		query = query.Must(elastic.NewTermQuery("OriginalCountry", param.OriginalCountry))
+		query = query.Must(elastic.NewMatchQuery("OriginalCountry", param.OriginalCountry))
 		highlight.Field("OriginalCountry")
 	}
+	if param.StartDate != "" && param.EndDate != "" {
+		query = query.Filter(elastic.NewRangeQuery("FrankTime").From(param.StartDate).To(param.EndDate))
+	} else if param.StartDate != "" && param.EndDate == "" {
+		query = query.Filter(elastic.NewRangeQuery("FrankTime").From(param.StartDate).To(nil))
+	} else if param.StartDate == "" && param.EndDate != "" {
+		query = query.Filter(elastic.NewRangeQuery("FrankTime").From(nil).To(param.EndDate))
+	}
+
 	query = query.Boost(10)
 	query = query.DisableCoord(true)
 	query = query.QueryName("frankDetail")
@@ -285,7 +295,6 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		var frank model.Frank
 		jsonObject, _ := detail.MarshalJSON()
 		jsoniter.Unmarshal(jsonObject, &frank)
-
 		//高亮
 		hight := res.Hits.Hits[i].Highlight
 		if param.ProDesc != "" {
@@ -387,6 +396,8 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	client := constants.Instance()
 	CompanyRelationsSearch := client.Search().Index("trade").Type("frank")
 	query := elastic.NewBoolQuery()
+	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
+	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
 	var collapse *elastic.CollapseBuilder
 	if param.ProKey != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
@@ -454,7 +465,7 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 			for j := 0; j < len(relationship.Partner[i].Partner); j++ {
 				query := elastic.NewBoolQuery()
 				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[i].CompanyId))
+				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[i].Partner[j].CompanyId))
 				query = query.QueryName("filter")
 				res, err := serviceThree.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
 				if err != nil {
@@ -589,6 +600,8 @@ var GroupHistory = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	//过滤一年
 	//query.Must(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
 	query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
+	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
+	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
 	if param.ProKey != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
 		highlight.Field("ProDesc")
@@ -750,6 +763,8 @@ var NewTenFrank = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	client := constants.Instance()
 	NewTenFrankSearch := client.Search().Index("trade").Type("frank")
 	query := elastic.NewBoolQuery()
+	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
+	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
 	if param.CompanyType == 0 {
 		if param.CompanyId != 0 {
 			query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
@@ -812,6 +827,8 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	InfoDetailSearch := client.Search().Index("trade").Type("frank")
 	query := elastic.NewBoolQuery()
 	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
+	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
+	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
 	query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
 	if param.CompanyType == 0 {
 		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
