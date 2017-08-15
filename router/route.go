@@ -10,14 +10,14 @@ import (
 func Route(frame *faygo.Framework) {
 	frame.Route(
 		frame.NewGroup("/frank",
-		    frame.NewPUT("/DetailList.go").Use(middleware.CrossOrigin),
+			frame.NewPUT("/DetailList.go").Use(middleware.CrossOrigin),
 			frame.NewPOST("/DetailList.go", &handler.FrankDetail).Use(middleware.CrossOrigin),
 
 			frame.NewOPTIONS("/search.go").Use(middleware.CrossOrigin),
 			frame.NewPOST("/search.go", &handler.Search).Use(middleware.CrossOrigin),
 
 			frame.NewOPTIONS("/topTen.go").Use(middleware.CrossOrigin),
-			frame.NewPOST("/topTen.go", &handler.TopTenProduct),
+			frame.NewPOST("/topTen.go", &handler.TopTenProduct).Use(middleware.CrossOrigin),
 
 			frame.NewPOST("/CompanyRelations.go", &handler.CompanyRelations).Use(middleware.CrossOrigin),
 			frame.NewOPTIONS("/CompanyRelations.go").Use(middleware.CrossOrigin),
@@ -31,7 +31,7 @@ func Route(frame *faygo.Framework) {
 			frame.NewOPTIONS("/ProductList.go").Use(middleware.CrossOrigin),
 			frame.NewPOST("/ProductList.go", &handler.ProductList).Use(middleware.CrossOrigin),
 			frame.NewOPTIONS("/InfoDetail.go").Use(middleware.CrossOrigin),
-			frame.NewPOST("/InfoDetail.go",&handler.InfoDetail).Use(middleware.CrossOrigin),
+			frame.NewPOST("/InfoDetail.go", &handler.InfoDetail).Use(middleware.CrossOrigin),
 		),
 
 		frame.NewNamedAPI("Index", "GET", "/", handler.Index),
