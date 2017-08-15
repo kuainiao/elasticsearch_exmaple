@@ -281,7 +281,6 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	} else if param.StartDate == "" && param.EndDate != "" {
 		query = query.Filter(elastic.NewRangeQuery("FrankTime").From(nil).To(param.EndDate))
 	}
-
 	query = query.Boost(10)
 	query = query.DisableCoord(true)
 	query = query.QueryName("frankDetail")
@@ -388,6 +387,7 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		CompanyRelationsCtx, cancel = context.WithCancel(context.Background())
 	}
 	defer cancel()
+
 	//companyName待查
 	relationship := model.Relationship{
 		CompanyId:   param.CompanyId,
@@ -401,7 +401,6 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var collapse *elastic.CollapseBuilder
 	if param.ProKey != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-
 	}
 	if param.CompanyType == 0 {
 		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
@@ -430,6 +429,9 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 			var frank model.Frank
 			jsonObject, _ := detail.MarshalJSON()
 			jsoniter.Unmarshal(jsonObject, &frank)
+			if relationship.CompanyName == "" {
+				relationship.CompanyName = frank.Purchaser
+			}
 			relationship.Partner = append(relationship.Partner, model.Relationship{
 				frank.SupplierId, frank.Supplier, nil})
 		}
