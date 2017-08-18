@@ -116,6 +116,7 @@ type Response struct {
 type TopTenProduct struct {
 	ProductName string `json:"product_name"`
 	Count       int64  `json:"count"`
+	ProId int64 `json:"pid"`
 }
 
 type Relationship struct {

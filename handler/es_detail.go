@@ -2,13 +2,14 @@ package handler
 
 import (
 	"context"
+	"strings"
+	"time"
+
 	"github.com/henrylee2cn/faygo"
 	"github.com/json-iterator/go"
 	"github.com/zhangweilun/tradeweb/constants"
 	"github.com/zhangweilun/tradeweb/model"
 	"gopkg.in/olivere/elastic.v5"
-	"strings"
-	"time"
 )
 
 // CompanyRelations ... 详情
@@ -251,3 +252,7 @@ var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		Code: 0,
 	})
 })
+
+//findBusinessTrendInfo.php
+type detailTrend struct {
+}

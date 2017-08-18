@@ -3,19 +3,20 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"time"
 
+	"net/url"
+
 	"github.com/henrylee2cn/faygo"
+	"github.com/henrylee2cn/faygo/ext/db/xorm"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/zhangweilun/tradeweb/constants"
 	"github.com/zhangweilun/tradeweb/model"
 	util "github.com/zhangweilun/tradeweb/util"
 	elastic "gopkg.in/olivere/elastic.v5"
-	"net/url"
 )
 
 /**
@@ -68,7 +69,10 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
+	}
+	if param.PageNo > 1000 {
+		param.PageNo = 1000
 	}
 	if param.TimeOut != 0 {
 		SearchCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
@@ -104,7 +108,6 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	count, _ := countSearch.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
 	resCardinality, _ := count.Aggregations.Cardinality("count")
 	total := resCardinality.Value
-	fmt.Println(*total)
 	search = search.Query(query)
 	//https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_filtering_values_with_partitions
 	//分页等分区处理
@@ -222,7 +225,6 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		//设置高亮
 		hight := res.Hits.Hits[0].Highlight
 		if param.ProKey != "" {
-			fmt.Println(hight["ProDesc"][0])
 			franks[i].ProDesc = hight["ProDesc"][0]
 		}
 		if param.CompanyName != "" {
@@ -254,7 +256,10 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var param queryParam
 	err := ctx.BindJSON(&param)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
+	}
+	if param.PageNo > 1000 {
+		param.PageNo = 1000
 	}
 	if param.TimeOut != 0 {
 		FrankDetailCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
@@ -333,7 +338,7 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
 	}
 	if param.TimeOut != 0 {
 		TopTenProductCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
@@ -349,17 +354,25 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	} else {
 		query = elastic.NewTermQuery("SupplierId", param.CompanyId).QueryName("SupplierId")
 	}
-	agg := elastic.NewTermsAggregation().Field("ProductName.keyword").OrderByCount(false).Size(10)
+	agg := elastic.NewTermsAggregation().Field("ProductId").OrderByCount(false).Size(10)
 	res, _ := TopTenSearch.Query(query).Aggregation("TopTen", agg).Size(0).Do(TopTenProductCtx)
 	aggregations := res.Aggregations
 	terms, _ := aggregations.Terms("TopTen")
 	var topTenProducts []model.TopTenProduct
+	db := xorm.MustDB("default")
 	for i := 0; i < len(terms.Buckets); i++ {
-		ProductName := terms.Buckets[i].Key.(string)
+		ProductId := terms.Buckets[i].Key.(float64)
+		var productNew model.ProductNew
+		productNew.Id = int(ProductId)
+		ok, err := db.Get(&productNew)
+		if !ok {
+			ctx.Log().Error(err)
+		}
 		count := terms.Buckets[i].DocCount
 		top10 := model.TopTenProduct{
-			ProductName: ProductName,
+			ProductName: productNew.Name,
 			Count:       count,
+			ProId:       int64(ProductId),
 		}
 		topTenProducts = append(topTenProducts, top10)
 	}
@@ -383,7 +396,8 @@ var GroupHistory = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
+
 	}
 	if param.TimeOut != 0 {
 		GroupHistoryCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
@@ -556,7 +570,7 @@ var NewTenFrank = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
 	}
 	if param.TimeOut != 0 {
 		NewTenFrankCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
@@ -583,7 +597,7 @@ var NewTenFrank = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	NewTenFrankSearch.RequestCache(true)
 	res, err := NewTenFrankSearch.Do(NewTenFrankCtx)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
 	}
 	var franks []model.Frank
 	for i := 0; i < len(res.Hits.Hits); i++ {
@@ -619,7 +633,7 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
 	}
 	if param.TimeOut != 0 {
 		infoDetailCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
@@ -648,7 +662,7 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	from := (param.PageNo - 1) * param.PageSize
 	res, err := InfoDetailSearch.Query(query).From(from).Size(param.PageSize).Do(infoDetailCtx)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
 	}
 	var franks []model.Frank
 	for i := 0; i < len(res.Hits.Hits); i++ {
@@ -721,7 +735,7 @@ var findSupplierTop10 = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 var DetailOne = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	orderID, err := strconv.Atoi(ctx.QueryParam("orderId"))
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
 	}
 	var (
 		DetailOneCtx context.Context
@@ -735,7 +749,7 @@ var DetailOne = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	query = query.Must(elastic.NewTermQuery("OrderId", orderID))
 	res, err := search.Size(1).Query(query).Do(DetailOneCtx)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
 	}
 	detail := res.Hits.Hits[0].Source
 	var frank model.Frank
@@ -760,7 +774,7 @@ var ProductList = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
 	}
 	if param.TimeOut != 0 {
 		ProductListCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
@@ -776,7 +790,7 @@ var ProductList = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	ProductListSearch.Query(query).From(from).Size(param.PageSize)
 	res, err := ProductListSearch.Do(ProductListCtx)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Log().Error(err)
 	}
 	var franks []model.Product
 	for i := 0; i < len(res.Hits.Hits); i++ {

@@ -2,6 +2,10 @@ package handler
 
 import (
 	"context"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/henrylee2cn/faygo"
 	"github.com/henrylee2cn/faygo/ext/db/xorm"
 	jsoniter "github.com/json-iterator/go"
@@ -9,9 +13,6 @@ import (
 	"github.com/zhangweilun/tradeweb/model"
 	util "github.com/zhangweilun/tradeweb/util"
 	elastic "gopkg.in/olivere/elastic.v5"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var redis = constants.Redis()
@@ -240,6 +241,55 @@ type vwDistributed struct {
 }
 
 ///getTurnoverDistributed
-func (vw *vwDistributed) Serve(ctx *faygo.Context) error {
-
-}
+//func (vw *vwDistributed) Serve(ctx *faygo.Context) error {
+//	var (
+//		vwDistributedCtx context.Context
+//		cancel           context.CancelFunc
+//		vwCount          *elastic.SumAggregation
+//		search           *elastic.SearchService
+//		products         []model.Product
+//		redisKey         string
+//	)
+//	vwDistributedCtx, cancel = context.WithCancel(context.Background())
+//	defer cancel()
+//	client := constants.Instance()
+//	search = client.Search().Index("trade").Type("frank")
+//	agg := elastic.NewTermsAggregation()
+//	query := elastic.NewBoolQuery()
+//	dataType(query, vw.DateType)
+//	district(query, vw.DistrictID, vw.DistrictLevel, vw.IeType)
+//	//查全球，过滤找不到国家的
+//	if vw.DistrictID == 0 {
+//		//进口
+//		if vw.IeType == 0 {
+//			query = query.Filter(elastic.NewTermQuery("PurchaserDistrictId1", 0))
+//			agg.Field("PurchaserDistrictId1")
+//		} else {
+//			query = query.Filter(elastic.NewTermQuery("SupplierDistrictId1", 0))
+//			agg.Field("SupplierDistrictId1")
+//		}
+//	}
+//	//查国家
+//	if vw.DistrictLevel == 1 {
+//		if vw.IeType == 0 {
+//			query = query.Filter(elastic.NewTermQuery("PurchaserDistrictId2", 0))
+//			agg.Field("PurchaserDistrictId2")
+//		} else {
+//			query = query.Filter(elastic.NewTermQuery("SupplierDistrictId2", 0))
+//			agg.Field("SupplierDistrictId2")
+//		}
+//	} else if vw.DistrictLevel == 2 {
+//		if vw.IeType == 0 {
+//			query = query.Filter(elastic.NewTermQuery("PurchaserDistrictId3", 0))
+//			agg.Field("PurchaserDistrictId3")
+//		} else {
+//			query = query.Filter(elastic.NewTermQuery("SupplierDistrictId3", 0))
+//			agg.Field("SupplierDistrictId3")
+//		}
+//	}
+//	vwType(vwCount, vw.VwType)
+//
+//	agg = agg.SubAggregation("vwCount", vwCount).Size(10).OrderByAggregation("vwCount", false)
+//	search = search.Query(query).Aggregation("search", agg).RequestCache(true)
+//	return nil
+//}
