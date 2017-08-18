@@ -1,12 +1,14 @@
 package util
 
 import (
-	"github.com/zhangweilun/gor"
-	"github.com/zhangweilun/goxmlpath"
 	"log"
 	"math"
 	"reflect"
+	"strconv"
 	"unsafe"
+
+	"github.com/zhangweilun/gor"
+	"github.com/zhangweilun/goxmlpath"
 )
 
 /**
@@ -15,6 +17,11 @@ import (
 * @created 2017-07-26 18:01
 * @email 18702515157@163.com
 **/
+
+func FloatToString(input_num float64) string {
+	// to convert a float number to a string
+	return strconv.FormatFloat(input_num, 'f', 6, 64)
+}
 
 //保留小数点后几位
 func Round(f float64, n int) float64 {

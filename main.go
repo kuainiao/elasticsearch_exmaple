@@ -6,6 +6,9 @@ import (
 )
 
 func main() {
+	//GOOS=linux GOARCH=amd64 go build
+	//scp ./tradeweb gls@gls_api:/data/tradego
+	//screen -r es
 	//ps -ef|grep tradeweb
 	//kill -9 19781
 	//chmod +x tradeweb

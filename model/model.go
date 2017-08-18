@@ -11,6 +11,8 @@ import (
 * @email 18702515157@163.com
 **/
 
+//xorm reverse mysql "root:19960118@tcp(127.0.0.1:3306)/web"
+//$GOPATH/src/github.com/go-xorm/cmd/xorm/templates/goxorm
 type JsonDate time.Time
 type JsonTime time.Time
 
@@ -61,42 +63,53 @@ func Todatetime(in string) (out time.Time, err error) {
 }
 
 type Frank struct {
-	OrderId          int64    `json:"OrderId"`
-	MudiPort         string   `json:"MudiPort"`
-	Purchaser        string   `json:"Purchaser"`
-	PurchaserAddress string   `json:"PurchaserAddress"`
-	SupplierId       int64    `json:"SupplierId"`
-	PurchaserId      int64    `json:"PurchaserId"`
-	OrderNo          string   `json:"OrderNo"`
-	OrderWeight      float64  `json:"OrderWeight"`
-	Supplier         string   `json:"Supplier"`
-	ProDesc          string   `json:"ProDesc"`
-	ProKey           string   `json:"pro_key"`
-	OriginalCountry  string   `json:"OriginalCountry"`
-	SupplierAddress  string   `json:"SupplierAddress"`
-	FrankTime        JsonDate `json:"FrankTime"`
-	OrderVolume      float64  `json:"OrderVolume"`
-	QiyunPort        string   `json:"QiyunPort"`
-	TradeNumber      int64    `json:"TradeNumber"`
-	ProductName      string   `json:"ProductName"`
-	CompanyName      string   `json:"company_name"`
-	CompanyId        int64    `json:"company_id"`
-	Score            int      `json:"score"`
-	CompanyAddress   string   `json:"company_address"`
+	OrderId              int64    `json:"OrderId,omitempty"`
+	MudiPort             string   `json:"MudiPort,omitempty"`
+	Purchaser            string   `json:"Purchaser,omitempty"`
+	PurchaserAddress     string   `json:"PurchaserAddress,omitempty"`
+	SupplierId           int64    `json:"SupplierId,omitempty"`
+	PurchaserId          int64    `json:"PurchaserId,omitempty"`
+	OrderNo              string   `json:"OrderNo,omitempty"`
+	OrderWeight          float64  `json:"OrderWeight,omitempty"`
+	Supplier             string   `json:"Supplier,omitempty"`
+	ProDesc              string   `json:"ProDesc,omitempty"`
+	ProKey               string   `json:"pro_key,omitempty"`
+	OriginalCountry      string   `json:"OriginalCountry,omitempty"`
+	SupplierAddress      string   `json:"SupplierAddress,omitempty"`
+	FrankTime            JsonDate `json:"FrankTime,omitempty"`
+	OrderVolume          float64  `json:"OrderVolume,omitempty"`
+	QiyunPort            string   `json:"QiyunPort,omitempty"`
+	TradeNumber          int64    `json:"TradeNumber,omitempty"`
+	ProductName          string   `json:"ProductName,omitempty"`
+	CompanyName          string   `json:"company_name,omitempty"`
+	CompanyId            int64    `json:"company_id,omitempty"`
+	Score                int      `json:"score,omitempty"`
+	CompanyAddress       string   `json:"company_address,omitempty"`
+	VesselId             int      `json:"VesselId,omitempty"`
+	VesselName           string   `json:"VesselName,omitempty"`
+	CategoryName         string   `json:"CategoryName,omitempty"`
+	CategoryId           int      `json:"CategoryId,omitempty"`
+	SupplierDistrictId1  int      `json:"SupplierDistrictId1,omitempty"`
+	SupplierDistrictId2  int      `json:"SupplierDistrictId2,omitempty"`
+	SupplierDistrictId3  int      `json:"SupplierDistrictId3,omitempty"`
+	PurchaserDistrictId3 int      `json:"PurchaserDistrictId3,omitempty"`
+	PurchaserDistrictId2 int      `json:"PurchaserDistrictId2,omitempty"`
+	PurchaserDistrictId1 int      `json:"PurchaserDistrictId1,omitempty"`
+	ProductId            int      `json:"ProductId,omitempty"`
+	HsCode               int      `json:"HsCode,omitempty"`
 }
 
 type Product struct {
-	ProductName string `json:"productName"`
-	ProId       int    `json:"proId"`
-	Cid         int    `json:"cid"`
-	Cname       string `json:"cname"`
+	ProductName string  `json:"pname"`
+	ProId       int64   `json:"pid"`
+	Count       float64 `json:"count"`
 }
 
 type Response struct {
-	Error string      `json:"error"`
+	Error string      `json:"error,omitempty"`
 	Code  int         `json:"code"`
-	Date  interface{} `json:"date"`
-	List  interface{} `json:"list"`
+	Data  interface{} `json:"data,omitempty"`
+	List  interface{} `json:"list,omitempty"`
 	Total int64       `json:"total"`
 }
 
@@ -106,7 +119,15 @@ type TopTenProduct struct {
 }
 
 type Relationship struct {
-	CompanyId   int64
-	CompanyName string
-	Partner     []Relationship
+	ParentID    int64          `json:"parent_id"`
+	ParentName  string         `json:"parent_name"`
+	CompanyID   int64          `json:"company_id"`
+	CompanyName string         `json:"company_name"`
+	Partner     []Relationship `json:"partner"`
+}
+
+type Category struct {
+	CategoryName string  `json:"cnameEn"`
+	CategoryId   int     `json:"cid"`
+	Value        float64 `json:"value"`
 }

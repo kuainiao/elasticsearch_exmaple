@@ -15,6 +15,7 @@ import (
 	"github.com/zhangweilun/tradeweb/model"
 	util "github.com/zhangweilun/tradeweb/util"
 	elastic "gopkg.in/olivere/elastic.v5"
+	"net/url"
 )
 
 /**
@@ -24,7 +25,7 @@ import (
 * @email 18702515157@163.com
 **/
 
-type detailQuery struct {
+type DetailQuery struct {
 	CompanyType     int           `json:"company_type,omitempty"` // 0：采购商 1:供应商
 	PageNo          int           `json:"page_no"`
 	PageSize        int           `json:"page_size"`
@@ -62,7 +63,9 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		SearchCtx context.Context
 		cancel    context.CancelFunc
 	)
-	var param detailQuery
+	var cardinality *elastic.CardinalityAggregation
+	agg := elastic.NewTermsAggregation()
+	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
 		fmt.Println(err)
@@ -78,27 +81,30 @@ var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	query := elastic.NewBoolQuery()
 	query.QueryName("matchQuery")
 	if param.ProKey != "" {
-		query = query.Must(elastic.NewMatchQuery("ProDesc", param.ProKey))
+		proKey, err := url.PathUnescape(param.ProKey)
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	}
 	countSearch := client.Search().Index("trade").Type("frank")
-	cardinality := elastic.NewCardinalityAggregation().Field("PurchaserId")
+	if param.CompanyType == 0 {
+		cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
+		agg.Field("PurchaserId")
+		if param.CompanyName != "" {
+			query = query.Must(elastic.NewMatchQuery("Purchaser", strings.ToLower(param.CompanyName)))
+		}
+	} else {
+		cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
+		agg.Field("SupplierId")
+		if param.CompanyName != "" {
+			query = query.Must(elastic.NewMatchQuery("Supplier", strings.ToLower(param.CompanyName)))
+		}
+	}
 	count, _ := countSearch.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
 	resCardinality, _ := count.Aggregations.Cardinality("count")
 	total := resCardinality.Value
 	fmt.Println(*total)
-	agg := elastic.NewTermsAggregation()
-	if param.CompanyType == 0 {
-		agg.Field("PurchaserId")
-		if param.CompanyName != "" {
-			query = query.Must(elastic.NewMatchQuery("Purchaser", param.CompanyName))
-		}
-	} else {
-		agg.Field("SupplierId")
-		if param.CompanyName != "" {
-			query = query.Must(elastic.NewMatchQuery("Supplier", param.CompanyName))
-		}
-	}
-	// query = query.MustNot(elastic.NewTermQuery("Supplier"), "UNBE")
 	search = search.Query(query)
 	//https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_filtering_values_with_partitions
 	//分页等分区处理
@@ -324,7 +330,7 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		TopTenProductCtx context.Context
 		cancel           context.CancelFunc
 	)
-	var param detailQuery
+	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
 		fmt.Println(err)
@@ -364,220 +370,6 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	return ctx.JSON(200, response)
 })
 
-// CompanyRelations ... 详情
-//公司关系图
-//传入参数proKey 公司id 公司类型
-//https://elasticsearch.cn/article/132
-//	b := NewCollapseBuilder("user").
-//InnerHit(NewInnerHit().Name("last_tweets").Size(5).Sort("date", true)).
-//MaxConcurrentGroupRequests(4) 去重查询
-var CompanyRelations = faygo.HandlerFunc(func(ctx *faygo.Context) error {
-	var (
-		CompanyRelationsCtx context.Context
-		cancel              context.CancelFunc
-	)
-	var param detailQuery
-	err := ctx.BindJSON(&param)
-	if err != nil {
-		fmt.Println(err)
-	}
-	if param.TimeOut != 0 {
-		CompanyRelationsCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
-	} else {
-		CompanyRelationsCtx, cancel = context.WithCancel(context.Background())
-	}
-	defer cancel()
-
-	//companyName待查
-	relationship := model.Relationship{
-		CompanyId:   param.CompanyId,
-		CompanyName: param.CompanyName,
-	}
-	client := constants.Instance()
-	CompanyRelationsSearch := client.Search().Index("trade").Type("frank")
-	query := elastic.NewBoolQuery()
-	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
-	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
-	var collapse *elastic.CollapseBuilder
-	if param.ProKey != "" {
-		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-	}
-	if param.CompanyType == 0 {
-		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
-		collapse = elastic.NewCollapseBuilder("SupplierId").
-			InnerHit(elastic.NewInnerHit().Name("SupplierId").Size(0).Sort("FrankTime", false)).
-			MaxConcurrentGroupRequests(4)
-	} else {
-		query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyId))
-		collapse = elastic.NewCollapseBuilder("PurchaserId").
-			InnerHit(elastic.NewInnerHit().Name("PurchaserId").Size(0).Sort("FrankTime", false)).
-			MaxConcurrentGroupRequests(4)
-	}
-	query = query.Boost(10)
-	query = query.DisableCoord(true)
-	query = query.QueryName("filter")
-	res, err := CompanyRelationsSearch.Query(query).Sort("FrankTime", false).Size(10).Collapse(collapse).Do(CompanyRelationsCtx)
-	fmt.Println(collapse)
-	if err != nil {
-		log.Println(err)
-	}
-	//一级 采购
-	if param.CompanyType == 0 {
-		//查供应商 一级
-		if len(res.Hits.Hits) > 0 {
-			for i := 0; i < len(res.Hits.Hits); i++ {
-				detail := res.Hits.Hits[i].Source
-				var frank model.Frank
-				jsonObject, _ := detail.MarshalJSON()
-				jsoniter.Unmarshal(jsonObject, &frank)
-				if relationship.CompanyName == "" {
-					relationship.CompanyName = frank.Purchaser
-				}
-				relationship.Partner = append(relationship.Partner, model.Relationship{
-					frank.SupplierId, frank.Supplier, nil})
-			}
-		}
-		//查采购商 二级
-		serviceTwo := client.Search().Index("trade").Type("frank").Sort("FrankTime", false).Size(5)
-		collapse = elastic.NewCollapseBuilder("SupplierId").
-			InnerHit(elastic.NewInnerHit().Name("SupplierId").Size(0).Sort("FrankTime", false)).
-			MaxConcurrentGroupRequests(4)
-		for i := 0; i < len(relationship.Partner); i++ {
-			query := elastic.NewBoolQuery()
-			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-			query = query.Must(elastic.NewTermQuery("SupplierId", relationship.Partner[i].CompanyId))
-			query = query.QueryName("filter")
-			res, err := serviceTwo.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
-			if err != nil {
-				fmt.Println(err)
-			}
-			if len(res.Hits.Hits) > 0 {
-				for q := 0; q < len(res.Hits.Hits); q++ {
-					detail := res.Hits.Hits[q].Source
-					jsonObject, _ := detail.MarshalJSON()
-					var frank model.Frank
-					jsoniter.Unmarshal(jsonObject, &frank)
-					relationship.Partner[i].Partner = append(relationship.Partner[i].Partner,
-						model.Relationship{frank.PurchaserId, frank.Purchaser, nil})
-				}
-			}
-		}
-		//查供应商  三级
-		serviceThree := client.Search().Index("trade").Type("frank").Sort("FrankTime", false).Size(10)
-		collapse = elastic.NewCollapseBuilder("PurchaserId").
-			InnerHit(elastic.NewInnerHit().Name("PurchaserId").Size(0).Sort("FrankTime", false)).
-			MaxConcurrentGroupRequests(4)
-		for i := 0; i < len(relationship.Partner); i++ {
-			for j := 0; j < len(relationship.Partner[i].Partner); j++ {
-				query := elastic.NewBoolQuery()
-				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[i].Partner[j].CompanyId))
-				query = query.QueryName("filter")
-				res, err := serviceThree.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
-				if err != nil {
-					fmt.Println(err)
-				}
-				if len(res.Hits.Hits) > 0 {
-					for q := 0; q < len(res.Hits.Hits); q++ {
-						detail := res.Hits.Hits[q].Source
-						jsonObject, _ := detail.MarshalJSON()
-						var frank model.Frank
-						jsoniter.Unmarshal(jsonObject, &frank)
-						relationship.Partner[i].Partner[j].Partner = append(relationship.Partner[i].Partner[j].Partner,
-							model.Relationship{frank.SupplierId, frank.Supplier, nil})
-					}
-				}
-			}
-		}
-
-	} else {
-		//去重
-		levelOne := make(map[string]int64)
-		levelTwo := make(map[string]int64)
-		levelThree := make(map[string]int64)
-		for i := 0; i < len(res.Hits.Hits); i++ {
-			detail := res.Hits.Hits[i].Source
-			var frank model.Frank
-			jsonObject, _ := detail.MarshalJSON()
-			jsoniter.Unmarshal(jsonObject, &frank)
-			levelOne[frank.Purchaser] = frank.PurchaserId
-		}
-		for k, v := range levelOne {
-			relationship.Partner = append(relationship.Partner, model.Relationship{v, k, nil})
-		}
-
-		//查采购 二级
-		serviceTwo := client.Search().Index("trade").Type("frank")
-		for j := 0; j < len(relationship.Partner); j++ {
-			query := elastic.NewBoolQuery()
-			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-			query = query.Must(elastic.NewTermQuery("SupplierId", relationship.Partner[j].CompanyId))
-			query = query.QueryName("filter")
-			res, err := serviceTwo.Query(query).Size(2).Sort("FrankTime", false).Do(CompanyRelationsCtx)
-			if err != nil {
-				fmt.Println(err)
-			}
-			if len(res.Hits.Hits) > 1 {
-				for i := 0; i < len(res.Hits.Hits); i++ {
-					detail := res.Hits.Hits[i].Source
-					var frank model.Frank
-					jsonObject, _ := detail.MarshalJSON()
-					jsoniter.Unmarshal(jsonObject, &frank)
-					levelTwo[frank.Supplier] = frank.SupplierId
-				}
-				for k, v := range levelTwo {
-					relationship.Partner[j].Partner = append(relationship.Partner[j].Partner, model.Relationship{v, k, nil})
-				}
-			} else {
-				detail := res.Hits.Hits[0].Source
-				var frank model.Frank
-				jsonObject, _ := detail.MarshalJSON()
-				jsoniter.Unmarshal(jsonObject, &frank)
-				relationship.Partner[j].Partner = append(relationship.Partner[j].Partner, model.Relationship{frank.PurchaserId, frank.Purchaser, nil})
-			}
-
-		}
-
-		//查供应商 三级
-		serviceThree := client.Search().Index("trade").Type("frank")
-		for j := 0; j < len(relationship.Partner); j++ {
-			for i := 0; i < len(relationship.Partner[j].Partner); i++ {
-				query := elastic.NewBoolQuery()
-				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
-				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[j].Partner[i].CompanyId))
-				query = query.QueryName("filter")
-				res, err := serviceThree.Query(query).Size(2).Sort("FrankTime", false).Do(CompanyRelationsCtx)
-				if err != nil {
-					fmt.Println(err)
-				}
-				if len(res.Hits.Hits) > 1 {
-					for i := 0; i < len(res.Hits.Hits); i++ {
-						detail := res.Hits.Hits[i].Source
-						var frank model.Frank
-						jsonObject, _ := detail.MarshalJSON()
-						jsoniter.Unmarshal(jsonObject, &frank)
-						levelThree[frank.Purchaser] = frank.PurchaserId
-					}
-					for k, v := range levelThree {
-						relationship.Partner[j].Partner[i].Partner = append(relationship.Partner[j].Partner[i].Partner, model.Relationship{v, k, nil})
-					}
-				} else {
-					detail := res.Hits.Hits[0].Source
-					var frank model.Frank
-					jsonObject, _ := detail.MarshalJSON()
-					jsoniter.Unmarshal(jsonObject, &frank)
-					relationship.Partner[j].Partner[i].Partner = append(relationship.Partner[j].Partner[i].Partner, model.Relationship{frank.SupplierId, frank.Supplier, nil})
-				}
-			}
-		}
-
-	}
-	return ctx.JSON(200, model.Response{
-		List: relationship,
-		Code: 0,
-	})
-})
-
 // GroupHistory ... 详情
 //Nearly a year of trading history
 //通过proKey相关的公司的近一年的交易记录 如果是采购上进来 先查prokey 再通过group supplier分组来处理
@@ -588,7 +380,7 @@ var GroupHistory = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		GroupHistoryCtx context.Context
 		cancel          context.CancelFunc
 	)
-	var param detailQuery
+	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
 		fmt.Println(err)
@@ -611,7 +403,11 @@ var GroupHistory = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
 	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
 	if param.ProKey != "" {
-		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
+		proKey, err := url.PathUnescape(param.ProKey)
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 		highlight.Field("ProDesc")
 		if param.CompanyType == 0 {
 			if param.CompanyId != 0 {
@@ -748,7 +544,7 @@ var GroupHistory = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	return ctx.JSON(200, response)
 })
 
-//最新10条交易记录
+//NewTenFrank 最新10条交易记录
 //传入参数公司id 公司类型
 //{ "company_type":0, "page_no":1, "page_size":10, "company_id":143382, "pro_key":"", "company_name":"", "time_out":5}
 // status :ok
@@ -757,7 +553,7 @@ var NewTenFrank = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		NewTenFrankCtx context.Context
 		cancel         context.CancelFunc
 	)
-	var param detailQuery
+	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
 		fmt.Println(err)
@@ -820,7 +616,7 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		infoDetailCtx context.Context
 		cancel        context.CancelFunc
 	)
-	var param detailQuery
+	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
 		fmt.Println(err)
@@ -834,7 +630,11 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	client := constants.Instance()
 	InfoDetailSearch := client.Search().Index("trade").Type("frank")
 	query := elastic.NewBoolQuery()
-	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(param.ProKey)))
+	proKey, err := url.PathUnescape(param.ProKey)
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
 	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
 	query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
@@ -880,6 +680,10 @@ var findSupplierTop10 = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	return nil
 })
 
+//findBusinessTrendInfo.php 找写的逻辑
+//detailReq
+//findbusinessDistribution.php
+//regionMap
 //首页产品搜索
 //包括全球产品出口柜量占比（国家）
 //包括全球产品进口柜量占比（国家）
@@ -913,6 +717,36 @@ var findSupplierTop10 = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 //	return nil
 //})
 
+//DetailOne 通过orderid得出详情
+var DetailOne = faygo.HandlerFunc(func(ctx *faygo.Context) error {
+	orderID, err := strconv.Atoi(ctx.QueryParam("orderId"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	var (
+		DetailOneCtx context.Context
+		cancel       context.CancelFunc
+	)
+	DetailOneCtx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	client := constants.Instance()
+	search := client.Search().Index("trade").Type("frank")
+	query := elastic.NewBoolQuery()
+	query = query.Must(elastic.NewTermQuery("OrderId", orderID))
+	res, err := search.Size(1).Query(query).Do(DetailOneCtx)
+	if err != nil {
+		fmt.Println(err)
+	}
+	detail := res.Hits.Hits[0].Source
+	var frank model.Frank
+	jsonObject, _ := detail.MarshalJSON()
+	jsoniter.Unmarshal(jsonObject, &frank)
+	return ctx.JSON(200, model.Response{
+		Code: 0,
+		Data: frank,
+	})
+})
+
 //ProductList ...
 //首页
 //得到产品列表
@@ -923,7 +757,7 @@ var ProductList = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		ProductListCtx context.Context
 		cancel         context.CancelFunc
 	)
-	var param detailQuery
+	var param DetailQuery
 	err := ctx.BindJSON(&param)
 	if err != nil {
 		fmt.Println(err)

@@ -116,6 +116,11 @@ func TestScanf(t *testing.T) {
 	fmt.Println(year)
 }
 
+func TestPath(t *testing.T) {
+	unescape, _ := url.PathUnescape("vacuum%20cleaner")
+	fmt.Println(unescape)
+}
+
 func TestJson(t *testing.T) {
 
 	b := []byte(`{"OrderId": 22829801, "MudiPort": "3002, TACOMA, WA", "Purchaser": "563215 BC LTD", "PurchaserAddress": "5930 NO 6 RD UNIT 325 RICHMOND BC V6V1Z1 CA", "SupplierId": 506056, "PurchaserId": 80, "OrderNo": "FTNVTPS000040583", "OrderWeight": 0.065, "Supplier": "SPANK INDUSTRIES CO LTD", "ProDesc": "BIKE PARTSON BOARD DATE<br/>", "OriginalCountry": "TW, TAIWAN", "SupplierAddress": "5F NO 62 JHONGMING S RD TAICHUNG TW", "FrankTime": "2015-07-03", "OrderVolume": 1.0, "QiyunPort": "58309, KAO HSIUNG", "TradeNumber": 0}`)
@@ -147,8 +152,8 @@ func TestJson(t *testing.T) {
 	fmt.Println(string(q))
 }
 
-func TestDiv(t *testing.T) {
-	encodeurl:= url.QueryEscape("5foGXY1Jqys5tQQCSkDF/dk+KxE=")
-	fmt.Println(encodeurl)
-	unescape, queryUnescape := url.QueryUnescape(encodeurl)
-}
+//func TestDiv(t *testing.T) {
+//	encodeurl:= url.QueryEscape("5foGXY1Jqys5tQQCSkDF/dk+KxE=")
+//	fmt.Println(encodeurl)
+//	unescape, queryUnescape := url.QueryUnescape(encodeurl)
+//}

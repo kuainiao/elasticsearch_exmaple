@@ -5,11 +5,11 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	"strings"
+
 	"github.com/henrylee2cn/faygo"
 	"github.com/json-iterator/go"
 	"github.com/zhangweilun/tradeweb/util"
-	"strings"
-
 )
 
 /**
@@ -38,7 +38,7 @@ var Sign = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 			fmt.Println(err)
 		}
 		ctx.Stop()
-		return ctx.JSON(200, util.BytesString(json))
+		return ctx.String(200, util.BytesString(json))
 	}
 	if strings.Contains(sign, "%2B") {
 		sign = strings.Replace(sign, "%2B", "+", -1)
