@@ -19,7 +19,7 @@ func Route(frame *faygo.Framework) {
 			frame.NewOPTIONS("/topTen.go"),
 			frame.NewPOST("/topTen.go", &handler.TopTenProduct),
 
-			frame.NewPOST("/CompanyRelations.go", &handler.CompanyRelations),
+			frame.NewPOST("/CompanyRelations.go", &handler.CompanyRelations{}),
 			frame.NewOPTIONS("/CompanyRelations.go"),
 
 			frame.NewOPTIONS("/GroupHistory.go"),
@@ -36,7 +36,7 @@ func Route(frame *faygo.Framework) {
 
 			frame.NewOPTIONS("/DetailOne.go"),
 			frame.NewGET("/DetailOne.go", &handler.DetailOne),
-		).Use(middleware.CrossOrigin),
+		),
 
 		frame.NewGroup("/index",
 			frame.NewOPTIONS("/AggCount.go"),
@@ -47,10 +47,10 @@ func Route(frame *faygo.Framework) {
 
 			frame.NewOPTIONS("/CategoryProductTopTen.go"),
 			frame.NewGET("/CategoryProductTopTen.go", &handler.CategoryProductTopTen{}).Use(middleware.RedisCache),
-		).Use(middleware.CrossOrigin),
+		),
 
 		frame.NewNamedAPI("Index", "GET", "/", handler.Index).Use(middleware.DbQuery),
 		frame.NewNamedAPI("test struct handler", "POST", "/test", &handler.Test{}).
 			Use(middleware.Token),
-	)
+	).Use(middleware.CrossOrigin)
 }
