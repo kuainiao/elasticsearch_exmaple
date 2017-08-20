@@ -75,6 +75,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		agg         *elastic.TermsAggregation
 		search      *elastic.SearchService
 		query       *elastic.BoolQuery
+		redisKey    string
 	)
 	if s.PageNo > 1000 {
 		s.PageNo = 1000
@@ -245,6 +246,13 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		ctx.Log().Error(err)
 	}
 
+	if ctx.HasData("redisKey") {
+		redisKey = ctx.Data("redisKey").(string)
+		err := redis.Set(redisKey, util.BytesString(result), 1*time.Hour).Err()
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+	}
 	return ctx.String(200, util.BytesString(result))
 
 }

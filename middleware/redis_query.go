@@ -1,9 +1,10 @@
 package middleware
 
 import (
+	"strings"
+
 	"github.com/henrylee2cn/faygo"
 	"github.com/zhangweilun/tradeweb/constants"
-	"strings"
 )
 
 /**
@@ -29,6 +30,18 @@ var RedisCache = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 			return ctx.String(200, val)
 		}
 		ctx.SetData("redisKey", "GET"+url)
+	} else if ctx.Method() == "POST" {
+		url := ctx.URI()
+		params := ctx.FormParamAll()
+		for k, v := range params {
+			url = url + "?" + k + "=" + v[0]
+		}
+		val, err := redis.Get("GET" + url).Result()
+		if err == nil {
+			ctx.Stop()
+			return ctx.String(200, val)
+		}
+		ctx.SetData("redisKey", "POST"+url)
 	}
 	return nil
 })
