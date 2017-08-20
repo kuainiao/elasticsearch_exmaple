@@ -52,8 +52,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 	client := constants.Instance()
 	search = client.Search().Index("trade").Type("frank")
 	query = elastic.NewBoolQuery()
-	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
-	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
+	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	proKey, _ := url.PathUnescape(c.ProKey)
 	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	if c.CompanyType == 0 {

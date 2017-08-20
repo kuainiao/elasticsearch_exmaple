@@ -62,12 +62,16 @@ type Search struct {
 	CompanyName string        `param:"<in:formData> <name:company_name> <required:required>  <err:company_name不能为空！>  <desc:0采购商 1供应商> "`
 	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>   <err:pro_key不能为空！>  <desc:产品描述>"`
 	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
-	PageNo      int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <err:page_no不能为空！>  <desc:分页页码>"`
-	PageSize    int           `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
-	Sort        int           `param:"<in:formData> <name:sort> <required:required>  <nonzero:nonzero> <err:sort不能为空！>  <desc:排序的参数 1 2 3>"`
+	PageNo      int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <err:page_no不能为空或0！>  <desc:分页页码>"`
+	PageSize    int           `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空或0！>  <desc:分页的页数>"`
+	Sort        int           `param:"<in:formData> <name:sort> <required:required>  <err:sort不能为空！>  <desc:排序的参数 1 2 3>"`
 }
 
+//Serve 首页搜索逻辑
 func (s *Search) Serve(ctx *faygo.Context) error {
+	if s.CompanyName == "" && s.ProKey == "" {
+		return ctx.String(200, "comnpany_name或者pro_key不能同时为空")
+	}
 	var (
 		SearchCtx   context.Context
 		cancel      context.CancelFunc
@@ -88,8 +92,9 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 	defer cancel()
 	client := constants.Instance()
 	search = client.Search().Index("trade").Type("frank")
-	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
-	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
+	query = elastic.NewBoolQuery()
+	agg = elastic.NewTermsAggregation()
+	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	proKey, _ := url.PathUnescape(s.ProKey)
 	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	if s.CompanyType == 0 {
@@ -257,197 +262,6 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 
 }
 
-//Search ...
-//首页
-//产品描述或者公司名称搜索
-// var Search = faygo.HandlerFunc(func(ctx *faygo.Context) error {
-// 	var (
-// 		SearchCtx context.Context
-// 		cancel    context.CancelFunc
-// 	)
-// 	var cardinality *elastic.CardinalityAggregation
-// 	agg := elastic.NewTermsAggregation()
-// 	var param DetailQuery
-// 	err := ctx.BindJSON(&param)
-// 	if err != nil {
-// 		ctx.Log().Error(err)
-// 	}
-// 	if param.PageNo > 1000 {
-// 		param.PageNo = 1000
-// 	}
-// 	if param.TimeOut != 0 {
-// 		SearchCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
-// 	} else {
-// 		SearchCtx, cancel = context.WithCancel(context.Background())
-// 	}
-// 	defer cancel()
-// 	client := constants.Instance()
-// 	search := client.Search().Index("trade").Type("frank")
-// 	query := elastic.NewBoolQuery()
-// 	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
-// 	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
-// 	query.QueryName("matchQuery")
-// 	if param.ProKey != "" {
-// 		proKey, err := url.PathUnescape(param.ProKey)
-// 		if err != nil {
-// 			ctx.Log().Error(err)
-// 		}
-// 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
-// 	}
-// 	countSearch := client.Search().Index("trade").Type("frank")
-// 	if param.CompanyType == 0 {
-// 		cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
-// 		agg.Field("PurchaserId")
-// 		if param.CompanyName != "" {
-// 			query = query.Must(elastic.NewMatchQuery("Purchaser", strings.ToLower(param.CompanyName)))
-// 		}
-// 	} else {
-// 		cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
-// 		agg.Field("SupplierId")
-// 		if param.CompanyName != "" {
-// 			query = query.Must(elastic.NewMatchQuery("Supplier", strings.ToLower(param.CompanyName)))
-// 		}
-// 	}
-// 	count, _ := countSearch.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
-// 	resCardinality, _ := count.Aggregations.Cardinality("count")
-// 	total := resCardinality.Value
-// 	search = search.Query(query)
-// 	//https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_filtering_values_with_partitions
-// 	//分页等分区处理
-// 	if param.Sort == 2 {
-// 		agg = agg.OrderByAggregation("volume", false)
-
-// 	} else if param.Sort == -2 {
-// 		agg = agg.OrderByAggregation("volume", true)
-
-// 	} else if param.Sort == 3 {
-// 		agg = agg.OrderByAggregation("weight", false)
-
-// 	} else if param.Sort == -3 {
-// 		agg = agg.OrderByAggregation("weight", true)
-
-// 	} else if param.Sort == 1 {
-// 		agg = agg.OrderByCount(false)
-
-// 	} else if param.Sort == -1 {
-// 		agg = agg.OrderByCount(true)
-
-// 	} else {
-// 		agg = agg.OrderByCount(false)
-// 	}
-// 	agg.Size(param.PageSize * param.PageNo)
-// 	weightAgg := elastic.NewSumAggregation().Field("OrderWeight")
-// 	volumeAgg := elastic.NewSumAggregation().Field("OrderVolume")
-// 	agg = agg.SubAggregation("weight", weightAgg)
-// 	agg = agg.SubAggregation("volume", volumeAgg)
-// 	search = search.Aggregation("search", agg).RequestCache(true)
-// 	res, _ := search.Size(0).Do(SearchCtx)
-// 	aggregations := res.Aggregations
-// 	terms, _ := aggregations.Terms("search")
-// 	//增加一个数组 容量等于前端请求的pageSize，循环purchaseId获取详细信息
-// 	var franks []model.Frank
-// 	for i := (param.PageNo - 1) * param.PageSize; i < len(terms.Buckets); i++ {
-// 		companyId := terms.Buckets[i].Key.(float64)
-// 		tradeNumber := terms.Buckets[i].DocCount
-// 		frank := model.Frank{
-// 			CompanyId:   int64(companyId),
-// 			TradeNumber: tradeNumber,
-// 		}
-// 		for k, v := range terms.Buckets[i].Aggregations {
-// 			data, _ := v.MarshalJSON()
-// 			if k == "volume" {
-// 				value := util.BytesString(data)
-// 				volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
-// 				if err != nil {
-// 					log.Println(err)
-// 				}
-// 				frank.OrderVolume = util.Round(volume, 2)
-// 			}
-// 			if k == "weight" {
-// 				value := util.BytesString(data)
-// 				weight, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
-// 				if err != nil {
-// 					log.Println(err)
-// 				}
-// 				frank.OrderWeight = util.Round(weight, 2)
-// 			}
-// 		}
-// 		franks = append(franks, frank)
-// 	}
-
-// 	//获取详细信息
-// 	//fsc := NewFetchSourceContext(true).Include("title")
-// 	//agg := NewTopHitsAggregation().
-// 	for i := 0; i < len(franks); i++ {
-// 		search := client.Search().Index("trade").Type("frank")
-// 		query := elastic.NewBoolQuery()
-// 		query.QueryName("frankDetail")
-// 		highlight := elastic.NewHighlight()
-// 		if param.CompanyType == 0 {
-// 			query = query.Must(elastic.NewTermQuery("PurchaserId", franks[i].CompanyId))
-// 			if param.CompanyName != "" {
-// 				query = query.Must(elastic.NewMatchQuery("Purchaser", param.CompanyName))
-// 				highlight.Field("Purchaser")
-// 			}
-// 		} else {
-// 			query = query.Must(elastic.NewTermQuery("SupplierId", franks[i].CompanyId))
-// 			if param.CompanyName != "" {
-// 				query = query.Must(elastic.NewMatchQuery("Supplier", param.CompanyName))
-// 				highlight.Field("Supplier")
-// 			}
-// 		}
-// 		highlight = highlight.PreTags(`<font color="#FF0000">`).PostTags("</font>")
-// 		if param.ProKey != "" {
-// 			query = query.Must(elastic.NewMatchQuery("ProDesc", param.ProKey))
-// 			highlight.Field("ProDesc")
-// 		}
-// 		search.Query(query).Highlight(highlight).Sort("FrankTime", false).From(0).Size(1)
-// 		search.RequestCache(true)
-// 		res, _ := search.Do(SearchCtx)
-// 		var frank model.Frank
-// 		detail := res.Hits.Hits[0].Source
-// 		jsonObject, _ := detail.MarshalJSON()
-// 		json.Unmarshal(jsonObject, &frank)
-// 		if param.CompanyType == 0 {
-// 			franks[i].CompanyName = frank.Purchaser
-// 			franks[i].CompanyId = frank.PurchaserId
-// 		} else {
-// 			franks[i].CompanyName = frank.Supplier
-// 			franks[i].CompanyId = frank.SupplierId
-// 		}
-// 		franks[i].FrankTime = frank.FrankTime
-// 		franks[i].QiyunPort = frank.QiyunPort
-// 		franks[i].OrderId = frank.OrderId
-// 		franks[i].ProDesc = frank.ProDesc
-// 		franks[i].OriginalCountry = frank.OriginalCountry
-// 		franks[i].MudiPort = frank.MudiPort
-// 		//franks[i].PurchaserAddress = frank.PurchaserAddress
-// 		franks[i].OrderNo = frank.OrderNo
-// 		//franks[i].SupplierAddress = frank.SupplierAddress
-// 		franks[i].ProKey = frank.ProKey
-// 		//设置高亮
-// 		hight := res.Hits.Hits[0].Highlight
-// 		if param.ProKey != "" {
-// 			franks[i].ProDesc = hight["ProDesc"][0]
-// 		}
-// 		if param.CompanyName != "" {
-// 			if param.CompanyType == 0 {
-// 				franks[i].CompanyName = hight["Purchaser"][0]
-// 			} else {
-// 				franks[i].CompanyName = hight["Supplier"][0]
-// 			}
-// 		}
-// 	}
-// 	response := model.Response{
-// 		List:  franks,
-// 		Code:  0,
-// 		Total: int64(*total),
-// 	}
-
-// 	return ctx.JSON(200, response)
-
-// })
-
 //FrankDetail ...
 //首页
 //搜索提单
@@ -473,8 +287,7 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	client := constants.Instance()
 	search := client.Search().Index("trade").Type("frank")
 	query := elastic.NewBoolQuery()
-	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
-	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
+	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	highlight := elastic.NewHighlight()
 	if param.ProDesc != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", param.ProDesc))
