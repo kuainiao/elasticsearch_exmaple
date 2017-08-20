@@ -20,7 +20,7 @@ import (
 //InnerHit(NewInnerHit().Name("last_tweets").Size(5).Sort("date", true)).
 //MaxConcurrentGroupRequests(4) 去重查询
 type CompanyRelations struct {
-	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>  <nonzero:nonzero>  <desc:产品描述>"`
+	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>  <nonzero:nonzero> <err:pro_key不能为空！>  <desc:产品描述>"`
 	CompanyID   int64         `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <desc:采购商或者供应商公司id> "`
 	CompanyType int           `param:"<in:formData> <name:company_type> <required:required>   <desc:0采购商 1供应商> "`
 	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
