@@ -14,7 +14,7 @@ func Route(frame *faygo.Framework) {
 			frame.NewPOST("/DetailList.go", &handler.FrankDetail),
 
 			frame.NewOPTIONS("/search.go"),
-			frame.NewPOST("/search.go", &handler.Search),
+			frame.NewPOST("/search.go", &handler.Search{}),
 
 			frame.NewOPTIONS("/topTen.go"),
 			frame.NewPOST("/topTen.go", &handler.TopTenProduct),
