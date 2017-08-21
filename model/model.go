@@ -116,7 +116,7 @@ type Response struct {
 type TopTenProduct struct {
 	ProductName string `json:"product_name"`
 	Count       int64  `json:"count"`
-	ProId int64 `json:"pid"`
+	ProId       int64  `json:"pid"`
 }
 
 type Relationship struct {
@@ -131,4 +131,15 @@ type Category struct {
 	CategoryName string  `json:"cnameEn"`
 	CategoryId   int     `json:"cid"`
 	Value        float64 `json:"value"`
+}
+
+type DetailInfo struct {
+	ID     int           `json:"id"`
+	Name   string        `json:"name"`
+	Trends []DetailTrand `json:"trends"`
+}
+
+type DetailTrand struct {
+	Value     float64 `json:"value"`
+	YearMonth string `json:"yearmonth"`
 }

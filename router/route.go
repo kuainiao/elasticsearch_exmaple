@@ -36,6 +36,9 @@ func Route(frame *faygo.Framework) {
 
 			frame.NewOPTIONS("/DetailOne.go"),
 			frame.NewGET("/DetailOne.go", &handler.DetailOne),
+
+			frame.NewOPTIONS("/DetailTrend.go"),
+			frame.NewPOST("/DetailTrend.go", &handler.DetailTrend{}),
 		),
 
 		frame.NewGroup("/index",
@@ -52,5 +55,5 @@ func Route(frame *faygo.Framework) {
 		frame.NewNamedAPI("Index", "GET", "/", handler.Index).Use(middleware.DbQuery),
 		frame.NewNamedAPI("test struct handler", "POST", "/test", &handler.Test{}).
 			Use(middleware.Token),
-	).Use(middleware.CrossOrigin)
+	).Use(middleware.CrossOrigin).Use(middleware.RedisCache)
 }

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/henrylee2cn/faygo"
@@ -31,13 +32,23 @@ var RedisCache = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		}
 		ctx.SetData("redisKey", "GET"+url)
 	} else if ctx.Method() == "POST" {
-		url := ctx.URI()
+		url := ctx.URI() + "?"
 		params := ctx.FormParamAll()
-		for k, v := range params {
-			url = url + "?" + k + "=" + v[0]
+		var queryKey []string
+		for k := range params {
+			queryKey = append(queryKey, k)
 		}
-		val, err := redis.Get("GET" + url).Result()
+		sort.Strings(queryKey)
+		for index := 0; index < len(queryKey); index++ {
+			for k, v := range params {
+				if queryKey[index] == k {
+					url = url + queryKey[index] + "=" + v[0] + "&"
+				}
+			}
+		}
+		val, err := redis.Get("POST" + url).Result()
 		if err == nil {
+			ctx.Log().Info(err)
 			ctx.Stop()
 			return ctx.String(200, val)
 		}

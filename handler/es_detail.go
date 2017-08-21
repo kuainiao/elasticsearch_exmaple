@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
+	"log"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,8 +20,7 @@ import (
 //公司关系图
 //传入参数proKey 公司id 公司类型
 //https://elasticsearch.cn/article/132
-//MaxConcurrentGroupRequests(4) 去重查询
-//   contentType: 'application/x-www-form-urlencoded',
+//contentType: 'application/x-www-form-urlencoded',
 //data: info,
 type CompanyRelations struct {
 	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>  <nonzero:nonzero> <err:pro_key不能为空！>  <desc:产品描述>"`
@@ -52,8 +53,8 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 	client := constants.Instance()
 	search = client.Search().Index("trade").Type("frank")
 	query = elastic.NewBoolQuery()
-	query = query.MustNot(elastic.NewTermQuery("Supplier", "UNAVAILABLE"))
-	query = query.MustNot(elastic.NewTermQuery("Purchaser", "UNAVAILABLE"))
+	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
+
 	proKey, _ := url.PathUnescape(c.ProKey)
 	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	if c.CompanyType == 0 {
@@ -258,6 +259,167 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 	return ctx.String(200, util.BytesString(result))
 }
 
+//DetailTrend ...
 //findBusinessTrendInfo.php
-type detailTrend struct {
+type DetailTrend struct {
+	ProKey         string        `param:"<in:formData> <name:pro_key> <required:required>  <nonzero:nonzero> <err:pro_key不能为空或者空字符串！>  <desc:产品描述>"`
+	CompanyIDArray string        `param:"<in:formData> <name:company_ids> <required:required> <nonzero:nonzero>  <desc:采购商或者供应商公司id> "`
+	CompanyType    int           `param:"<in:formData> <name:company_type> <required:required>   <desc:0采购商 1供应商> "`
+	TimeOut        time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	DateType       int           `param:"<in:formData> <name:date_type> <required:required>  <desc:date_type 0月(最近一年) 1年(12到17年)>"`
+	Vwtype         int           `param:"<in:formData> <name:vwtype>  <required:required>  <desc:vwtype 0volume 1weight>"`
+}
+
+//Serve 访问逻辑
+func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
+	var (
+		detailTrendCtx context.Context
+		cancel         context.CancelFunc
+		search         *elastic.SearchService
+		query          *elastic.BoolQuery
+		agg            *elastic.SumAggregation
+		dateAgg        *elastic.DateHistogramAggregation
+		redisKey       string
+	)
+	if detailTrend.TimeOut != 0 {
+		detailTrendCtx, cancel = context.WithTimeout(context.Background(), detailTrend.TimeOut*time.Second)
+	} else {
+		detailTrendCtx, cancel = context.WithCancel(context.Background())
+	}
+	defer cancel()
+	client := constants.Instance()
+	search = client.Search().Index("trade").Type("frank")
+	search.Size(1)
+	query = elastic.NewBoolQuery()
+	agg = elastic.NewSumAggregation()
+	dateAgg = elastic.NewDateHistogramAggregation()
+	ids := strings.Split(detailTrend.CompanyIDArray, ",")
+	query = query.Must(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
+	var results []model.DetailInfo
+	if detailTrend.Vwtype == 0 {
+		agg.Field("OrderVolume")
+	} else {
+		agg.Field("OrderWeight")
+	}
+	if detailTrend.DateType == 0 {
+		dateAgg.Field("FrankTime").Interval("month").Format("yyyy-MM-dd")
+		for Index := 0; Index < len(ids); Index++ {
+			if detailTrend.CompanyType == 0 {
+				query = query.Must(elastic.NewTermQuery("PurchaserId", ids[Index]))
+			} else {
+				query = query.Must(elastic.NewTermQuery("SupplierId", ids[Index]))
+			}
+			companyId, _ := strconv.Atoi(ids[Index])
+			result := model.DetailInfo{ID: companyId}
+			// 最近一年
+			query = query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
+			dateAgg.SubAggregation("vwCount", agg)
+			res, err := search.Query(query).Aggregation("detailTrend", dateAgg).Do(detailTrendCtx)
+			if err != nil {
+				ctx.Log().Error(err)
+			}
+			var frank model.Frank
+			if len(res.Hits.Hits) > 0 {
+				detail := res.Hits.Hits[0].Source
+				jsonObject, _ := detail.MarshalJSON()
+				jsoniter.Unmarshal(jsonObject, &frank)
+				result.Name = frank.Purchaser
+			} else {
+				continue
+			}
+			aggregations := res.Aggregations
+			terms, _ := aggregations.DateHistogram("detailTrend")
+			for i := 0; i < len(terms.Buckets); i++ {
+				dateString := terms.Buckets[i].KeyAsString
+				detail := model.DetailTrand{YearMonth: *dateString}
+				for k, v := range terms.Buckets[i].Aggregations {
+					data, _ := v.MarshalJSON()
+					if k == "vwCount" {
+						value := util.BytesString(data)
+						volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
+						if err != nil {
+							log.Println(err)
+						}
+
+						detail.Value = util.Round(volume, 2)
+					}
+				}
+				result.Trends = append(result.Trends, detail)
+			}
+			results = append(results, result)
+			query = elastic.NewBoolQuery()
+			search = client.Search().Index("trade").Type("frank")
+			query = query.Must(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
+		}
+
+	} else {
+		dateAgg.Field("FrankTime").Interval("year").Format("yyyy-MM-dd")
+		for Index := 0; Index < len(ids); Index++ {
+			if detailTrend.CompanyType == 0 {
+				query = query.Must(elastic.NewTermQuery("PurchaserId", ids[Index]))
+			} else {
+				query = query.Must(elastic.NewTermQuery("SupplierId", ids[Index]))
+			}
+			companyId, _ := strconv.Atoi(ids[Index])
+			result := model.DetailInfo{ID: companyId}
+			// 最近一年
+			if detailTrend.Vwtype == 0 {
+				agg.Field("OrderVolume")
+			} else {
+				agg.Field("OrderWeight")
+			}
+			dateAgg.SubAggregation("vwCount", agg)
+			res, err := search.Query(query).Aggregation("detailTrend", dateAgg).Do(detailTrendCtx)
+			if err != nil {
+				ctx.Log().Error(err)
+			}
+			var frank model.Frank
+			if len(res.Hits.Hits) > 0 {
+				detail := res.Hits.Hits[0].Source
+				jsonObject, _ := detail.MarshalJSON()
+				jsoniter.Unmarshal(jsonObject, &frank)
+				result.Name = frank.Supplier
+			} else {
+				continue
+			}
+			aggregations := res.Aggregations
+			terms, _ := aggregations.DateHistogram("detailTrend")
+			for i := 0; i < len(terms.Buckets); i++ {
+				dateString := terms.Buckets[i].KeyAsString
+				detail := model.DetailTrand{YearMonth: *dateString}
+				for k, v := range terms.Buckets[i].Aggregations {
+					data, _ := v.MarshalJSON()
+					if k == "vwCount" {
+						value := util.BytesString(data)
+						volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
+						if err != nil {
+							log.Println(err)
+						}
+
+						detail.Value = util.Round(volume, 2)
+					}
+				}
+				result.Trends = append(result.Trends, detail)
+			}
+			results = append(results, result)
+			query = elastic.NewBoolQuery()
+			search = client.Search().Index("trade").Type("frank")
+			query = query.Must(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
+		}
+
+	}
+	json, err := jsoniter.Marshal(model.Response{
+		Data: results,
+	})
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+	if ctx.HasData("redisKey") {
+		redisKey = ctx.Data("redisKey").(string)
+		err := redis.Set(redisKey, util.BytesString(json), 1*time.Hour).Err()
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+	}
+	return ctx.String(200, util.BytesString(json))
 }

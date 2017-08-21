@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-
+	"sort"
 
 	"testing"
 	"time"
@@ -38,22 +38,22 @@ type QueryParam struct {
 //}
 
 type Frank struct {
-	OrderId          int64   `json:"OrderId"`
-	MudiPort         string  `json:"MudiPort"`
-	Purchaser        string  `json:"Purchaser"`
-	PurchaserAddress string  `json:"PurchaserAddress"`
-	SupplierId       int64   `json:"SupplierId"`
-	PurchaserId      int64   `json:"PurchaserId"`
-	OrderNo          string  `json:"OrderNo"`
-	OrderWeight      float64 `json:"OrderWeight"`
-	Supplier         string  `json:"Supplier"`
-	ProDesc          string  `json:"ProDesc"`
-	OriginalCountry  string  `json:"OriginalCountry"`
-	SupplierAddress  string  `json:"SupplierAddress"`
-	FrankTime        JsonDate    `json:"FrankTime"`
-	OrderVolume      float64 `json:"OrderVolume"`
-	QiyunPort        string  `json:"QiyunPort"`
-	TradeNumber      int64   `json:"TradeNumber"`
+	OrderId          int64    `json:"OrderId"`
+	MudiPort         string   `json:"MudiPort"`
+	Purchaser        string   `json:"Purchaser"`
+	PurchaserAddress string   `json:"PurchaserAddress"`
+	SupplierId       int64    `json:"SupplierId"`
+	PurchaserId      int64    `json:"PurchaserId"`
+	OrderNo          string   `json:"OrderNo"`
+	OrderWeight      float64  `json:"OrderWeight"`
+	Supplier         string   `json:"Supplier"`
+	ProDesc          string   `json:"ProDesc"`
+	OriginalCountry  string   `json:"OriginalCountry"`
+	SupplierAddress  string   `json:"SupplierAddress"`
+	FrankTime        JsonDate `json:"FrankTime"`
+	OrderVolume      float64  `json:"OrderVolume"`
+	QiyunPort        string   `json:"QiyunPort"`
+	TradeNumber      int64    `json:"TradeNumber"`
 }
 
 type JsonDate time.Time
@@ -121,6 +121,13 @@ func TestPath(t *testing.T) {
 	fmt.Println(unescape)
 }
 
+func TestSort(t *testing.T) {
+	ss := []string{"surface", "ipad", "mac pro", "mac air", "think pad", "idea pad"}
+	sort.Strings(ss)
+	for index := 0; index < len(ss); index++ {
+		fmt.Println(ss[index])
+	}
+}
 func TestJson(t *testing.T) {
 
 	b := []byte(`{"OrderId": 22829801, "MudiPort": "3002, TACOMA, WA", "Purchaser": "563215 BC LTD", "PurchaserAddress": "5930 NO 6 RD UNIT 325 RICHMOND BC V6V1Z1 CA", "SupplierId": 506056, "PurchaserId": 80, "OrderNo": "FTNVTPS000040583", "OrderWeight": 0.065, "Supplier": "SPANK INDUSTRIES CO LTD", "ProDesc": "BIKE PARTSON BOARD DATE<br/>", "OriginalCountry": "TW, TAIWAN", "SupplierAddress": "5F NO 62 JHONGMING S RD TAICHUNG TW", "FrankTime": "2015-07-03", "OrderVolume": 1.0, "QiyunPort": "58309, KAO HSIUNG", "TradeNumber": 0}`)
