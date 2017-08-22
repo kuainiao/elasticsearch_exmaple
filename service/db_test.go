@@ -1,8 +1,9 @@
 package service
 
 import (
-	"testing"
 	"fmt"
+	"testing"
+
 )
 
 /**
@@ -15,4 +16,7 @@ import (
 func TestGetDidNameByDid(t *testing.T) {
 	did := GetDidNameByDid(3)
 	fmt.Println(did)
+}
+func TestMoveFrank(t *testing.T) {
+	MoveFrank("as", "asd")
 }
