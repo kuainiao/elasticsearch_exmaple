@@ -17,3 +17,6 @@ func GetDidNameByDid(districtId int64) string {
 	return district.DnameEn
 }
 
+func GetCompanyInfomation(companyType int, companyId int)  {
+	
+}

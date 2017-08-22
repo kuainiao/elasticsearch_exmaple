@@ -28,9 +28,9 @@ func MoveFrank(startTime string, endTime string) []model.Frankly2015 {
 	allPage := total / 1000
 	var i int64
 	for ; i < allPage; i++ {
-		db.Table("frankly_oredr_new").Alias("f").Select("f.*").Limit(int(i), 100).
-			Where("f.frankly_time >?", startTime).
-			And("f.frankly_time <?", endTime).Find(franks)
+		db.Table("frankly_oredr_new").Alias("f").Select("f.*").Limit(100, int(i)).
+			Where("f.frankly_time >?", "2015-01-01").
+			And("f.frankly_time <?", "2015-12-30").Find(franks)
 		fmt.Println(len(franks))
 		fmt.Println(franks[0])
 		if db.SupportInsertMany() {
