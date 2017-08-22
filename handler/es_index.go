@@ -303,9 +303,9 @@ type Search struct {
 	CompanyName string        `param:"<in:formData> <name:company_name> <required:required>  <err:company_name不能为空！>  <desc:0采购商 1供应商> "`
 	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>   <err:pro_key不能为空！>  <desc:产品描述>"`
 	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
-	PageNo      int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <err:page_no不能为空！>  <desc:分页页码>"`
+	PageNo      int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>   <desc:分页页码>"`
 	PageSize    int           `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
-	Sort        int           `param:"<in:formData> <name:sort> <required:required>  <nonzero:nonzero> <err:sort不能为空！>  <desc:排序的参数 1 2 3>"`
+	Sort        int           `param:"<in:formData> <name:sort> <required:required>  <err:sort不能为空！>  <desc:排序的参数 1 2 3>"`
 }
 
 func (s *Search) Serve(ctx *faygo.Context) error {
@@ -317,6 +317,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		search      *elastic.SearchService
 		query       *elastic.BoolQuery
 		redisKey    string
+		total       float64
 	)
 	if s.PageNo > 1000 {
 		s.PageNo = 1000
@@ -331,39 +332,6 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 	search = client.Search().Index("trade").Type("frank")
 	query = elastic.NewBoolQuery()
 	agg = elastic.NewTermsAggregation()
-	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
-	//判断是否全称存在
-	if s.CompanyName != "" {
-		query = query.Filter(elastic.NewTermQuery("Purchaser.keyword", s.CompanyName))
-		res, err := search.Query(query).Do(SearchCtx)
-		if err != nil {
-			ctx.Log().Error(err)
-		}
-		if res.Hits.TotalHits > 0 {
-			//存在全称匹配
-
-		}
-	}
-	proKey, _ := url.PathUnescape(s.ProKey)
-	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
-	if s.CompanyType == 0 {
-		cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
-		agg.Field("PurchaserId")
-		if s.CompanyName != "" {
-			query = query.Must(elastic.NewMatchQuery("Purchaser", strings.ToLower(s.CompanyName)))
-		}
-	} else {
-		cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
-		agg.Field("SupplierId")
-		if s.CompanyName != "" {
-			query = query.Must(elastic.NewMatchQuery("Supplier", strings.ToLower(s.CompanyName)))
-		}
-	}
-	count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
-	resCardinality, _ := count.Aggregations.Cardinality("count")
-	total := resCardinality.Value
-	search = client.Search().Index("trade").Type("frank")
-	search = search.Query(query)
 	if s.Sort == 2 {
 		agg = agg.OrderByAggregation("volume", false)
 
@@ -390,7 +358,80 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 	volumeAgg := elastic.NewSumAggregation().Field("OrderVolume")
 	agg = agg.SubAggregation("weight", weightAgg)
 	agg = agg.SubAggregation("volume", volumeAgg)
-	search = search.Aggregation("search", agg).RequestCache(true)
+	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
+	proKey, _ := url.PathUnescape(s.ProKey)
+	//判断是否全称存在
+	if s.CompanyName != "" {
+		//不能转小写，要全转大写
+		if s.CompanyType == 0 {
+			query = query.Filter(elastic.NewTermQuery("Purchaser.keyword", strings.ToUpper(s.CompanyName)))
+		} else {
+			query = query.Filter(elastic.NewTermQuery("Supplier.keyword", strings.ToUpper(s.CompanyName)))
+		}
+		if s.ProKey != "" {
+			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+		}
+		res, err := search.Query(query).Size(1).Do(SearchCtx)
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+		if res.Hits.TotalHits > 0 {
+			//存在全称匹配
+			if s.CompanyType == 0 {
+				cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
+				agg.Field("PurchaserId")
+			} else {
+				cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
+				agg.Field("SupplierId")
+			}
+			count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
+			resCardinality, _ := count.Aggregations.Cardinality("count")
+			total = *resCardinality.Value
+			search = client.Search().Index("trade").Type("frank")
+			search = search.Query(query)
+			search = search.Aggregation("search", agg).RequestCache(true)
+		} else {
+			query = elastic.NewBoolQuery()
+			query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
+			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+			if s.CompanyType == 0 {
+				cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
+				agg.Field("PurchaserId")
+				if s.CompanyName != "" {
+					query = query.Must(elastic.NewMatchQuery("Purchaser", strings.ToLower(s.CompanyName)))
+				}
+			} else {
+				cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
+				agg.Field("SupplierId")
+				if s.CompanyName != "" {
+					query = query.Must(elastic.NewMatchQuery("Supplier", strings.ToLower(s.CompanyName)))
+				}
+			}
+			count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
+			resCardinality, _ := count.Aggregations.Cardinality("count")
+			total = *resCardinality.Value
+			search = client.Search().Index("trade").Type("frank")
+			search = search.Query(query)
+			search = search.Aggregation("search", agg).RequestCache(true)
+		}
+	} else {
+		query = elastic.NewBoolQuery()
+		query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
+		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+		if s.CompanyType == 0 {
+			cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
+			agg.Field("PurchaserId")
+		} else {
+			cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
+			agg.Field("SupplierId")
+		}
+		count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
+		resCardinality, _ := count.Aggregations.Cardinality("count")
+		total = *resCardinality.Value
+		search = client.Search().Index("trade").Type("frank")
+		search = search.Query(query)
+		search = search.Aggregation("search", agg).RequestCache(true)
+	}
 	res, _ := search.Size(0).Do(SearchCtx)
 	aggregations := res.Aggregations
 	terms, _ := aggregations.Terms("search")
@@ -424,10 +465,6 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		}
 		franks = append(franks, frank)
 	}
-
-	//获取详细信息
-	//fsc := NewFetchSourceContext(true).Include("title")
-	//agg := NewTopHitsAggregation().
 	for i := 0; i < len(franks); i++ {
 		search := client.Search().Index("trade").Type("frank")
 		query := elastic.NewBoolQuery()
@@ -493,7 +530,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 	result, err := jsoniter.Marshal(model.Response{
 		List:  franks,
 		Code:  0,
-		Total: int64(*total),
+		Total: int64(total),
 	})
 
 	if err != nil {

@@ -1,8 +1,8 @@
 package goxmlpath
 
 import (
-	"github.com/zhangweilun/goxmlpath/html"
 	"encoding/xml"
+	"github.com/zhangweilun/goxmlpath/html"
 	"io"
 	"strings"
 )

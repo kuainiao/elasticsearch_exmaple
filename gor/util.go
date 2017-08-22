@@ -1,16 +1,16 @@
 package gor
 
 import (
+	"io"
 	"net/http"
 	"runtime"
-	"io"
 )
 
 /**
-* 
+*
 * @author willian
 * @created 2017-01-24 13:52
-* @email 18702515157@163.com  
+* @email 18702515157@163.com
 **/
 
 // EnsureTransporterFinalized will ensure that when the HTTP client is GCed
@@ -22,12 +22,10 @@ func EnsureTransporterFinalized(httpTransport *http.Transport) {
 	})
 }
 
-
 // XMLCharDecoder is a helper type that takes a stream of bytes (not encoded in
 // UTF-8) and returns a reader that encodes the bytes into UTF-8. This is done
 // because Go's XML library only supports XML encoded in UTF-8
 type XMLCharDecoder func(charset string, input io.Reader) (io.Reader, error)
-
 
 func addRedirectFunctionality(client *http.Client, ro *Request_options) {
 	if client.CheckRedirect != nil {

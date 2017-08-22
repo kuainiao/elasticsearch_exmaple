@@ -88,13 +88,13 @@ type Frank struct {
 	VesselId             int      `json:"VesselId,omitempty"`
 	VesselName           string   `json:"VesselName,omitempty"`
 	CategoryName         string   `json:"CategoryName,omitempty"`
-	CategoryId           int      `json:"CategoryId,omitempty"`
-	SupplierDistrictId1  int      `json:"SupplierDistrictId1,omitempty"`
-	SupplierDistrictId2  int      `json:"SupplierDistrictId2,omitempty"`
-	SupplierDistrictId3  int      `json:"SupplierDistrictId3,omitempty"`
-	PurchaserDistrictId3 int      `json:"PurchaserDistrictId3,omitempty"`
-	PurchaserDistrictId2 int      `json:"PurchaserDistrictId2,omitempty"`
-	PurchaserDistrictId1 int      `json:"PurchaserDistrictId1,omitempty"`
+	CategoryId           int64    `json:"CategoryId,omitempty"`
+	SupplierDistrictId1  int64    `json:"SupplierDistrictId1,omitempty"`
+	SupplierDistrictId2  int64    `json:"SupplierDistrictId2,omitempty"`
+	SupplierDistrictId3  int64    `json:"SupplierDistrictId3,omitempty"`
+	PurchaserDistrictId3 int64    `json:"PurchaserDistrictId3,omitempty"`
+	PurchaserDistrictId2 int64    `json:"PurchaserDistrictId2,omitempty"`
+	PurchaserDistrictId1 int64    `json:"PurchaserDistrictId1,omitempty"`
 	ProductId            int      `json:"ProductId,omitempty"`
 	HsCode               int      `json:"HsCode,omitempty"`
 }
@@ -141,5 +141,5 @@ type DetailInfo struct {
 
 type DetailTrand struct {
 	Value     float64 `json:"value"`
-	YearMonth string `json:"yearmonth"`
+	YearMonth string  `json:"yearMonth"`
 }

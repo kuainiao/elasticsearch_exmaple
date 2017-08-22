@@ -3,16 +3,16 @@ package gor
 import "testing"
 
 /**
-* 
+*
 * @author willian
 * @created 2017-01-24 18:36
-* @email 18702515157@163.com  
+* @email 18702515157@163.com
 **/
 
 func TestAddQueryParams(t *testing.T) {
-	url, err := buildURLParams("http://www.genshuixue.com/i-cxy/p/7648250", map[string]string{"1":"2", "3":"4"})
+	url, err := buildURLParams("http://www.genshuixue.com/i-cxy/p/7648250", map[string]string{"1": "2", "3": "4"})
 	if err != nil {
-		t.Error("url parse error",err)
+		t.Error("url parse error", err)
 	}
 	t.Log(url)
 }

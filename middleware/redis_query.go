@@ -42,7 +42,9 @@ var RedisCache = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		for index := 0; index < len(queryKey); index++ {
 			for k, v := range params {
 				if queryKey[index] == k {
-					url = url + queryKey[index] + "=" + v[0] + "&"
+					if k != "token" && k != "userId" {
+						url = url + queryKey[index] + "=" + v[0] + "&"
+					}
 				}
 			}
 		}
@@ -52,7 +54,7 @@ var RedisCache = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 			ctx.Stop()
 			return ctx.String(200, val)
 		}
-		ctx.SetData("redisKey", "POST"+url)
+		ctx.SetData("redisKey", "POST"+url[0:len(url)-1])
 	}
 	return nil
 })

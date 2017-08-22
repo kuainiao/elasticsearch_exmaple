@@ -3,29 +3,28 @@ package gor
 import "net/http"
 
 /**
-* 
+*
 * @author willian
 * @created 2017-01-28 20:19
-* @email 18702515157@163.com  
+* @email 18702515157@163.com
 **/
 
 // Session allows a user to make use of persistent cookies in between
 // HTTP requests
 type Session struct {
-	Request *Request_options
+	Request    *Request_options
 	HttpClient *http.Client
 }
-
 
 // NewSession returns a session struct which enables can be used to maintain establish a persistent state with the
 // server
 // This function will set UseCookieJar to true as that is the purpose of using the session
 func NewSession(r *Request_options) *Session {
-	if r ==nil{
+	if r == nil {
 		r = &Request_options{}
 	}
 	r.Use_cookieJar = true
-	return &Session{Request:r,HttpClient:BuildHTTPClient(*r)}
+	return &Session{Request: r, HttpClient: BuildHTTPClient(*r)}
 }
 
 // Combine session options and request options

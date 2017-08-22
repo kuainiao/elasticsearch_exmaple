@@ -7,10 +7,10 @@ package html
 import (
 	"bytes"
 	"errors"
+	"github.com/zhangweilun/goxmlpath/html/atom"
 	"io"
 	"strconv"
 	"strings"
-	"github.com/zhangweilun/goxmlpath/html/atom"
 )
 
 // A TokenType is the type of a Token.

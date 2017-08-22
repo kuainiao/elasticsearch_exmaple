@@ -1,31 +1,31 @@
 package gor
 
 import (
-	"net/url"
-	"time"
-	"net/http"
-	"io"
-	"context"
-	"net/http/cookiejar"
-	"github.com/zhangweilun/gor/publicsuffix"
-	"net"
-	"crypto/tls"
-	"strings"
-	"github.com/zhangweilun/gor/query"
-	"encoding/json"
 	"bytes"
+	"context"
+	"crypto/tls"
+	"encoding/json"
 	"encoding/xml"
-	"mime/multipart"
 	"errors"
-	"strconv"
+	"github.com/zhangweilun/gor/publicsuffix"
+	"github.com/zhangweilun/gor/query"
+	"io"
 	"mime"
+	"mime/multipart"
+	"net"
+	"net/http"
+	"net/http/cookiejar"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
 )
 
 /**
-* 
+*
 * @author willian
 * @created 2017-01-24 13:17
-* @email 18702515157@163.com  
+* @email 18702515157@163.com
 **/
 
 type Request_options struct {
@@ -44,7 +44,6 @@ type Request_options struct {
 	// structure is limited to POST requests
 	Files []File_upload
 
-
 	// Json can be used when you wish to send JSON within the request body
 	Json interface{}
 
@@ -54,7 +53,6 @@ type Request_options struct {
 	// Headers if you want to add custom HTTP headers to the request,
 	// this is your friend
 	Headers map[string]string
-
 
 	// InsecureSkipVerify is a flag that specifies if we should validate the
 	// server's TLS certificate. It should be noted that Go's TLS verify mechanism
@@ -132,7 +130,6 @@ type Request_options struct {
 	// Context can be used to maintain state between requests https://golang.org/pkg/context/#Context
 	Context context.Context
 }
-
 
 func reg(requestVerb, url string, ro *Request_options) (*Response, error) {
 	return build_response(build_request(requestVerb, url, ro, nil))
@@ -274,6 +271,7 @@ func buildURLStruct(userURL string, URLStruct interface{}) (string, error) {
 
 	return addQueryParams(parsedURL, parsedQuery), nil
 }
+
 // buildURLParams returns a URL with all of the params
 // Note: This function will override current URL params if they contradict what is provided in the map
 // That is what the "magic" is on the last line
