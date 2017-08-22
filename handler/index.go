@@ -9,7 +9,7 @@ import (
 Index
 */
 var Index = faygo.HandlerFunc(func(ctx *faygo.Context) error {
-	go service.MoveFrank("2015-01-01", "2015-12-30")
+	service.MoveFrank("2015-01-01", "2015-12-30")
 	//return ctx.Render(200, faygo.JoinStatic("index.html"), faygo.Map{
 	//	"TITLE":   "faygo",
 	//	"VERSION": faygo.VERSION,
