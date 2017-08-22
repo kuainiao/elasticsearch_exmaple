@@ -52,7 +52,7 @@ func Route(frame *faygo.Framework) {
 			frame.NewGET("/CategoryProductTopTen.go", &handler.CategoryProductTopTen{}).Use(middleware.RedisCache),
 		),
 
-		frame.NewNamedAPI("Index", "GET", "/", handler.Index).Use(middleware.DbQuery),
+		frame.NewNamedAPI("Index", "GET", "/", handler.Index),
 		frame.NewNamedAPI("test struct handler", "POST", "/test", &handler.Test{}).
 			Use(middleware.Token),
 	).Use(middleware.CrossOrigin)

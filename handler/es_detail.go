@@ -609,3 +609,5 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 	}
 	return ctx.String(200, util.BytesString(result))
 }
+
+
