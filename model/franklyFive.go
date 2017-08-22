@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type Frankly2015 struct {
+type FranklyFive struct {
 	Id                 int64     `xorm:"pk autoincr BIGINT(20)"`
 	Gid                int64     `xorm:"default 0 BIGINT(20)"`
 	FranklyCode        string    `xorm:"default '' VARCHAR(200)"`

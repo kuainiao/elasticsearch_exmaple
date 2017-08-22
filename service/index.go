@@ -18,8 +18,8 @@ func GetAllCountry() {
 
 }
 
-func MoveFrank(startTime string, endTime string) []model.Frankly2015 {
-	var franks []model.Frankly2015
+func MoveFrank(startTime string, endTime string) []model.FranklyFive {
+	var franks []model.FranklyFive
 	total, err := db.Table("frankly_oredr_new").Alias("f").Where("f.frankly_time >?", "2015-01-01").And("f.frankly_time <?", "2015-12-30").Count()
 	if err != nil {
 		fmt.Println(err)
@@ -27,7 +27,6 @@ func MoveFrank(startTime string, endTime string) []model.Frankly2015 {
 	fmt.Println(total)
 	allPage := 130000
 	for i := 0; i < allPage; i++ {
-		db.Find()
 		db.Table("frankly_oredr_new").Alias("f").Select("f.*").Limit(100, 100*(i)).
 			Where("f.frankly_time >?", "2015-01-01").
 			And("f.frankly_time <?", "2015-12-30").Find(&franks)
