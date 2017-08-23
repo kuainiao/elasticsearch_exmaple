@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"net/url"
+
+	"github.com/zhangweilun/tradeweb/gor"
 )
 
 /**
@@ -105,17 +107,6 @@ func Todatetime(in string) (out time.Time, err error) {
 	return out, err
 }
 
-func TestScanf(t *testing.T) {
-	str := "2016-09-23"
-	var (
-		year int
-		mon  int
-		mday int
-	)
-	fmt.Sscanf(str, "%d-%02d-%02d", &year, &mon, &mday)
-	fmt.Println(year)
-}
-
 func TestPath(t *testing.T) {
 	unescape, _ := url.PathUnescape("vacuum%20cleaner")
 	fmt.Println(unescape)
@@ -159,8 +150,18 @@ func TestJson(t *testing.T) {
 	fmt.Println(string(q))
 }
 
-//func TestDiv(t *testing.T) {
-//	encodeurl:= url.QueryEscape("5foGXY1Jqys5tQQCSkDF/dk+KxE=")
-//	fmt.Println(encodeurl)
-//	unescape, queryUnescape := url.QueryUnescape(encodeurl)
-//}
+func TestGor(t *testing.T) {
+	post, err := gor.Post("http://hstradeapi.g2l-service.com/findDataComList",
+		&gor.Request_options{
+			Json: map[string]string{
+				"ietype":     "0",
+				"shangJiaId": "896373",
+				"date_type":  "2",
+			},
+			Is_ajax: true,
+		})
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(post.String())
+}

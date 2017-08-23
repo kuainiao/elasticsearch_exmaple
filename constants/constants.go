@@ -70,6 +70,7 @@ type ProductConfig struct {
 	RedisAddr string `ini:"redis_addr" comment:"redis_addr address"`
 	RedisPass string `ini:"redis_pass" comment:"redis_pass "`
 	RedisDb   int    `ini:"redis_db" comment:"redis_pass "`
+	GlsUrl    string `ini:"gls_url" comment:"redis_pass "`
 }
 
 //Config Product Config

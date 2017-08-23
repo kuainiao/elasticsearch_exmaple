@@ -6,7 +6,7 @@ import (
 
 type District struct {
 	Did        int64     `xorm:"not null pk autoincr BIGINT(20)"`
-	Dname      string    `xorm:"not null default '' index VARCHAR(50)"`
+	Dname      string    `xorm:"not null default '' index VARCHAR(50)" json:"dname"`
 	DnameEn    string    `xorm:"not null default '' VARCHAR(50)"`
 	DnameCode  string    `xorm:"default '' VARCHAR(10)"`
 	Level      int       `xorm:"not null default 1 TINYINT(4)"`

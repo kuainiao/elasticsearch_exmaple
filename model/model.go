@@ -143,3 +143,11 @@ type DetailTrand struct {
 	Value     float64 `json:"value"`
 	YearMonth string  `json:"yearMonth"`
 }
+
+type MapInfo struct {
+	Value     int    `json:"value"`
+	Name      string `json:"name"`
+	Latitude  string `json:"latitude"`
+	Longitude string `json:"longitude"`
+	Did       int    `json:"did"`
+}

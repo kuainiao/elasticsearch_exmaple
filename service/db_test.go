@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 	"testing"
-
 )
 
 /**
@@ -29,4 +28,19 @@ func TestGetSupplier(t *testing.T) {
 func TestGetBuyer(t *testing.T) {
 	buyer := GetBuyer(429222)
 	fmt.Println(buyer.LinkPhone)
+}
+
+func TestGetBuyerContacts(t *testing.T) {
+	contacts := GetBuyerContacts(896373)
+	fmt.Println(contacts)
+}
+
+//SELECT d.dname_en name, count(b.id) as value,d.did,d.longitude,d.latitude
+//FROM `suppliers_new` AS `b` LEFT  JOIN `district` AS `d` ON b.did_level1 = d.did
+//WHERE b.id in (519197,554742,682318,682321,1081315,2151030,1111360,757763,2397174,682319) AND longitude != 0
+//GROUP BY d.did
+func TestGetCompanyDistrictInfo(t *testing.T) {
+	info := GetCompanyDistrictInfo("519197,554742,682318,682321,1081315,2151030,1111360,757763,2397174,682319",
+		1)
+	fmt.Println(info)
 }

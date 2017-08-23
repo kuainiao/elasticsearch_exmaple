@@ -11,6 +11,8 @@ import (
 	"github.com/henrylee2cn/faygo"
 	"github.com/json-iterator/go"
 	"github.com/zhangweilun/tradeweb/constants"
+
+	"github.com/zhangweilun/gor"
 	"github.com/zhangweilun/tradeweb/model"
 	"github.com/zhangweilun/tradeweb/service"
 	util "github.com/zhangweilun/tradeweb/util"
@@ -626,12 +628,68 @@ func (param *CompanyInfo) Serve(ctx *faygo.Context) error {
 	}
 }
 
-type CompanyContact struct {
+//公司列表
+type CompanyList struct {
 	CompanyType int           `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
 	CompanyID   int           `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <err:company_id不能为0>  <desc:公司类型>"`
 	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 }
 
-func (param *CompanyContact) Serve(ctx *faygo.Context) error {
-	return nil
+func (param *CompanyList) Serve(ctx *faygo.Context) error {
+	if param.CompanyType == 0 {
+		contacts := service.GetBuyerContacts(param.CompanyID)
+		if len(*contacts) == 0 {
+			//发送请求
+			post, err := gor.Post("http://tradeapi.g2l-service.com/findDataComList",
+				&gor.Request_options{
+					Json: map[string]string{
+						"ietype":     "0",
+						"shangJiaId": strconv.Itoa(param.CompanyID),
+						"date_type":  "2",
+					},
+					Is_ajax: true,
+				})
+			if err != nil {
+				ctx.Log().Error(err)
+			}
+			return ctx.String(200, post.String())
+		}
+		return ctx.JSON(200, model.Response{Data: service.GetBuyerContacts(param.CompanyID)})
+	} else {
+		contacts := service.GetSupplierContacts(param.CompanyID)
+		if len(*contacts) == 0 {
+			//发送请求
+			post, err := gor.Post("http://tradeapi.g2l-service.com/findDataComList",
+				&gor.Request_options{
+					Json: map[string]string{
+						"ietype":     "0",
+						"shangJiaId": strconv.Itoa(param.CompanyID),
+						"date_type":  "2",
+					},
+					Is_ajax: true,
+				})
+			if err != nil {
+				ctx.Log().Error(err)
+			}
+			return ctx.String(200, post.String())
+		}
+		return ctx.JSON(200, model.Response{Data: service.GetSupplierContacts(param.CompanyID)})
+
+	}
+}
+
+//采购商或者供应商地图分布
+type CompanyDistrict struct {
+	CompanyIDArray string        `param:"<in:formData> <name:company_ids> <required:required> <nonzero:nonzero> <err:company_ids不能为空或空字符串> <desc:采购商或者供应商公司id> "`
+	CompanyType    int           `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
+	TimeOut        time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+}
+
+func (param *CompanyDistrict) Serve(ctx *faygo.Context) error {
+	info := service.GetCompanyDistrictInfo(param.CompanyIDArray, param.CompanyType)
+	result, err := jsoniter.Marshal(info)
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+	return ctx.String(200, util.BytesString(result))
 }
