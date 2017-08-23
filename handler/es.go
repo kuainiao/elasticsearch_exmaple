@@ -149,18 +149,18 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 // TopTenProduct ... 详情
 //top10饼图和中间的商品名称 all product由前端展示
 //传入参数公司id 公司类型
-//需求确定 10加其他
-// status: ok
-var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
+type TopTenProduct struct {
+	CompanyType int           `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
+	CompanyID   int           `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <err:company_id不能为0>  <desc:公司类型>"`
+	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+}
+
+func (param *TopTenProduct) Serve(ctx *faygo.Context) error {
 	var (
 		TopTenProductCtx context.Context
 		cancel           context.CancelFunc
+		redisKey         string
 	)
-	var param DetailQuery
-	err := ctx.BindJSON(&param)
-	if err != nil {
-		ctx.Log().Error(err)
-	}
 	if param.TimeOut != 0 {
 		TopTenProductCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
 	} else {
@@ -171,9 +171,9 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	TopTenSearch := client.Search().Index("trade").Type("frank")
 	var query *elastic.TermQuery
 	if param.CompanyType == 0 {
-		query = elastic.NewTermQuery("PurchaserId", param.CompanyId).QueryName("purchaserId")
+		query = elastic.NewTermQuery("PurchaserId", param.CompanyID).QueryName("purchaserId")
 	} else {
-		query = elastic.NewTermQuery("SupplierId", param.CompanyId).QueryName("SupplierId")
+		query = elastic.NewTermQuery("SupplierId", param.CompanyID).QueryName("SupplierId")
 	}
 	agg := elastic.NewTermsAggregation().Field("ProductId").OrderByCount(false).Size(11)
 	res, _ := TopTenSearch.Query(query).Aggregation("TopTen", agg).Size(0).Do(TopTenProductCtx)
@@ -213,24 +213,35 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	if err != nil {
 		ctx.Log().Error(err)
 	}
+	if ctx.HasData("redisKey") {
+		redisKey = ctx.Data("redisKey").(string)
+		err := redis.Set(redisKey, util.BytesString(result), 1*time.Hour).Err()
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+	}
 	return ctx.String(200, util.BytesString(result))
-})
+}
 
 //NewTenFrank 最新10条交易记录
 //传入参数公司id 公司类型
 //{ "company_type":0, "page_no":1, "page_size":10, "company_id":143382, "pro_key":"", "company_name":"", "time_out":5}
 // status :ok
-var NewTenFrank = faygo.HandlerFunc(func(ctx *faygo.Context) error {
+
+type NewTenFrank struct {
+	CompanyType int           `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
+	CompanyID   int           `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <err:company_id不能为0>  <desc:公司类型>"`
+	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	PageNo      int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>  <desc:分页页码>"`
+	PageSize    int           `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
+}
+
+func (param *NewTenFrank) Serve(ctx *faygo.Context) error {
 	var (
 		NewTenFrankCtx context.Context
 		cancel         context.CancelFunc
 		redisKey       string
 	)
-	var param DetailQuery
-	err := ctx.BindJSON(&param)
-	if err != nil {
-		ctx.Log().Error(err)
-	}
 	if param.TimeOut != 0 {
 		NewTenFrankCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
 	} else {
@@ -243,12 +254,12 @@ var NewTenFrank = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 
 	if param.CompanyType == 0 {
-		if param.CompanyId != 0 {
-			query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
+		if param.CompanyID != 0 {
+			query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyID))
 		}
 	} else {
-		if param.CompanyId != 0 {
-			query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyId))
+		if param.CompanyID != 0 {
+			query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyID))
 		}
 	}
 	from := (param.PageNo - 1) * param.PageSize
@@ -290,7 +301,7 @@ var NewTenFrank = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		}
 	}
 	return ctx.String(200, util.BytesString(result))
-})
+}
 
 //InfoDetail ...
 //参数 供应商id 采购商id 参数proKey

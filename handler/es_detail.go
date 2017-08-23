@@ -640,7 +640,7 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 		contacts := service.GetBuyerContacts(param.CompanyID)
 		if len(*contacts) == 0 {
 			//发送请求
-			post, err := gor.Post("http://hstradeapi.g2l-service.com/findDataComList",
+			post, err := gor.Post(constants.Config.GlsUrl,
 				&gor.Request_options{
 					Json: map[string]string{
 						"ietype":     "0",
@@ -660,7 +660,7 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 		contacts := service.GetSupplierContacts(param.CompanyID)
 		if len(*contacts) == 0 {
 			//发送请求
-			post, err := gor.Post("http://hstradeapi.g2l-service.com/findDataComList",
+			post, err := gor.Post(constants.Config.GlsUrl,
 				&gor.Request_options{
 					Json: map[string]string{
 						"ietype":     "1",

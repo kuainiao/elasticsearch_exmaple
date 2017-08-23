@@ -17,7 +17,7 @@ func Route(frame *faygo.Framework) {
 			frame.NewPOST("/search.go", &handler.Search{}).Use(middleware.RedisCache),
 
 			frame.NewOPTIONS("/topTen.go"),
-			frame.NewPOST("/topTen.go", &handler.TopTenProduct).Use(middleware.RedisCache),
+			frame.NewPOST("/topTen.go", &handler.TopTenProduct{}).Use(middleware.RedisCache),
 
 			frame.NewOPTIONS("/CompanyRelations.go"),
 			frame.NewPOST("/CompanyRelations.go", &handler.CompanyRelations{}).Use(middleware.RedisCache),
@@ -27,7 +27,7 @@ func Route(frame *faygo.Framework) {
 			frame.NewPOST("/GroupHistory.go", &handler.GroupHistory{}).Use(middleware.RedisCache),
 
 			//frame.NewOPTIONS("/NewTenFrank.go"),
-			frame.NewPOST("/NewTenFrank.go", &handler.NewTenFrank).Use(middleware.RedisCache),
+			frame.NewPOST("/NewTenFrank.go", &handler.NewTenFrank{}).Use(middleware.RedisCache),
 
 			//frame.NewOPTIONS("/ProductList.go"),
 			frame.NewPOST("/ProductList.go", &handler.ProductList).Use(middleware.RedisCache),
