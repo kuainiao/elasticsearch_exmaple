@@ -10,7 +10,8 @@ import (
 
 	"net/url"
 
-	"github.com/zhangweilun/tradeweb/gor"
+	"github.com/zhangweilun/gor"
+	"strconv"
 )
 
 /**
@@ -151,11 +152,12 @@ func TestJson(t *testing.T) {
 }
 
 func TestGor(t *testing.T) {
+
 	post, err := gor.Post("http://hstradeapi.g2l-service.com/findDataComList",
 		&gor.Request_options{
 			Json: map[string]string{
 				"ietype":     "0",
-				"shangJiaId": "896373",
+				"shangJiaId": strconv.Itoa(896373),
 				"date_type":  "2",
 			},
 			Is_ajax: true,

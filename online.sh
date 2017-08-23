@@ -2,7 +2,6 @@
 
 echo '请输入要提交的注释信息:'
 
-
 read msg
 
 git add .

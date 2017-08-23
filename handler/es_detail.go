@@ -640,11 +640,12 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 		contacts := service.GetBuyerContacts(param.CompanyID)
 		if len(*contacts) == 0 {
 			//发送请求
-			post, err := gor.Post("http://tradeapi.g2l-service.com/findDataComList",
+			post, err := gor.Post("http://hstradeapi.g2l-service.com/findDataComList",
 				&gor.Request_options{
 					Json: map[string]string{
 						"ietype":     "0",
 						"shangJiaId": strconv.Itoa(param.CompanyID),
+						//"shangJiaId": "896373",
 						"date_type":  "2",
 					},
 					Is_ajax: true,
@@ -659,11 +660,12 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 		contacts := service.GetSupplierContacts(param.CompanyID)
 		if len(*contacts) == 0 {
 			//发送请求
-			post, err := gor.Post(constants.Config.GlsUrl,
+			post, err := gor.Post("http://hstradeapi.g2l-service.com/findDataComList",
 				&gor.Request_options{
 					Json: map[string]string{
-						"ietype":     "0",
+						"ietype":     "1",
 						"shangJiaId": strconv.Itoa(param.CompanyID),
+						//"shangJiaId": "896373",
 						"date_type":  "2",
 					},
 					Is_ajax: true,
