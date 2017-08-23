@@ -2,7 +2,6 @@ package handler
 
 import (
 	"github.com/henrylee2cn/faygo"
-	"github.com/zhangweilun/tradeweb/service"
 )
 
 /*

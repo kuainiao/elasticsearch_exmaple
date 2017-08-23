@@ -189,7 +189,7 @@ var TopTenProduct = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 			otherTotal = otherTotal + count
 		} else {
 			var productNew model.ProductNew
-			productNew.Id = int(ProductId)
+			productNew.Id = int64(ProductId)
 			ok, err := db.Get(&productNew)
 			if !ok {
 				ctx.Log().Error(err)

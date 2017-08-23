@@ -196,7 +196,7 @@ func (p *CategoryProductTopTen) Serve(ctx *faygo.Context) error {
 	for i := 0; i < len(terms.Buckets); i++ {
 		ProductId := terms.Buckets[i].Key.(float64)
 		var productNew model.ProductNew
-		productNew.Id = int(ProductId)
+		productNew.Id = int64(ProductId)
 		ok, err := db.Get(&productNew)
 		if !ok {
 			ctx.Log().Error(err)
