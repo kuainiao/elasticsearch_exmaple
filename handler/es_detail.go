@@ -659,7 +659,7 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 		contacts := service.GetSupplierContacts(param.CompanyID)
 		if len(*contacts) == 0 {
 			//发送请求
-			post, err := gor.Post("http://tradeapi.g2l-service.com/findDataComList",
+			post, err := gor.Post(constants.Config.GlsUrl,
 				&gor.Request_options{
 					Json: map[string]string{
 						"ietype":     "0",
