@@ -610,4 +610,18 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 	return ctx.String(200, util.BytesString(result))
 }
 
+//CompanyInfo 得到公司信息
+type CompanyInfo struct {
+	CompanyType int           `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
+	CompanyID   int           `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <err:company_id不能为0>  <desc:公司类型>"`
+	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+}
 
+func (param *CompanyInfo) Serve(ctx *faygo.Context) error {
+	if param.CompanyType == 0 {
+		//service.GetBuyer(param.CompanyID)
+		return ctx.JSON(200, model.Response{Data: service.GetBuyer(param.CompanyID)})
+	} else {
+		return ctx.JSON(200, model.Response{Data: service.GetSupplier(param.CompanyID)})
+	}
+}

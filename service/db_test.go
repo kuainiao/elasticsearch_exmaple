@@ -20,3 +20,13 @@ func TestGetDidNameByDid(t *testing.T) {
 func TestMoveFrank(t *testing.T) {
 	MoveFrank("as", "asd")
 }
+
+func TestGetSupplier(t *testing.T) {
+	supplier := GetSupplier(507834)
+	fmt.Println(supplier)
+}
+
+func TestGetBuyer(t *testing.T) {
+	buyer := GetBuyer(429222)
+	fmt.Println(buyer.LinkPhone)
+}

@@ -15,7 +15,7 @@ type BusinessesNew struct {
 	TotalCount      int       `xorm:"default 0 INT(11)"`
 	TotalWeight     float64   `xorm:"default 0.000 DOUBLE(20,3)"`
 	TotalVolume     float64   `xorm:"default 0.000 DOUBLE(20,3)"`
-	LastDate        time.Time `xorm:"TIMESTAMP"`
+	LastDate        time.Time `xorm:"default '0000-00-00 00:00:00' TIMESTAMP"`
 	LastProductDesc string    `xorm:"LONGTEXT"`
 	LastOrderId     int64     `xorm:"default 0 BIGINT(20)"`
 	DidLevel1       int64     `xorm:"not null default 0 index BIGINT(20)"`

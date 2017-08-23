@@ -10,7 +10,7 @@ import (
 func Route(frame *faygo.Framework) {
 	frame.Route(
 		frame.NewGroup("/frank",
-			frame.NewPUT("/DetailList.go"),
+			frame.NewOPTIONS("/DetailList.go"),
 			frame.NewPOST("/DetailList.go", &handler.FrankDetail).Use(middleware.RedisCache),
 
 			frame.NewOPTIONS("/search.go"),
@@ -39,6 +39,8 @@ func Route(frame *faygo.Framework) {
 
 			frame.NewOPTIONS("/DetailTrend.go"),
 			frame.NewPOST("/DetailTrend.go", &handler.DetailTrend{}).Use(middleware.RedisCache),
+
+			frame.NewPOST("/CompanyInfo.html", &handler.CompanyInfo{}),
 		),
 
 		frame.NewGroup("/index",
