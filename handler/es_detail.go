@@ -314,6 +314,8 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 		var forCount int
 		if len(ids) > 10 {
 			forCount = 10
+		} else {
+			forCount = len(ids)
 		}
 		for Index := 0; Index < forCount; Index++ {
 			query = elastic.NewBoolQuery()
@@ -381,6 +383,8 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 		var forCount int
 		if len(ids) > 10 {
 			forCount = 10
+		} else {
+			forCount = len(ids)
 		}
 		for Index := 0; Index < forCount; Index++ {
 			if detailTrend.CompanyType == 0 {
@@ -730,4 +734,8 @@ type CompanyContacts struct {
 	PageSize    int `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
 	CompanyID   int `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <err:company_id不能为0>  <desc:公司类型>"`
 	CompanyType int `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
+}
+
+func (param *CompanyContacts) Serve(tx *faygo.Context) error {
+	return nil
 }
