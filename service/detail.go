@@ -107,3 +107,9 @@ func GetCompanyDistrictInfo(companyIds string, companyType int) *[]model.MapInfo
 	}
 	return &maps
 }
+
+
+//
+func GetCompanyContacts(companyType int, companyId int)  {
+	
+}

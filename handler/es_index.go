@@ -42,7 +42,7 @@ func (q *AggCount) Serve(ctx *faygo.Context) error {
 	AggCountCtx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 	client := constants.Instance()
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type("frank")
 	query := elastic.NewBoolQuery()
 	dataType(query, q.DateType)
 	district(query, q.DistrictID, q.DistrictLevel, q.IeType)
@@ -62,7 +62,7 @@ func (q *AggCount) Serve(ctx *faygo.Context) error {
 	} else {
 		vwCount = elastic.NewSumAggregation().Field("OrderWeight")
 	}
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type("frank")
 	res, _ := search.Query(query).Aggregation("vwCount", vwCount).RequestCache(true).Size(0).Do(AggCountCtx)
 	terms, _ := res.Aggregations.Sum("vwCount")
 	resultCount := terms.Value
@@ -105,7 +105,7 @@ func (c *CategoryTopTen) Serve(ctx *faygo.Context) error {
 	AggCountCtx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 	client := constants.Instance()
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query := elastic.NewBoolQuery()
 	dataType(query, c.DateType)
 	district(query, c.DistrictID, c.DistrictLevel, c.IeType)
@@ -177,7 +177,7 @@ func (p *CategoryProductTopTen) Serve(ctx *faygo.Context) error {
 	AggCountCtx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 	client := constants.Instance()
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query := elastic.NewBoolQuery()
 	dataType(query, p.DateType)
 	district(query, p.DistrictID, p.DistrictLevel, p.IeType)
@@ -256,7 +256,7 @@ type vwDistributed struct {
 //	vwDistributedCtx, cancel = context.WithCancel(context.Background())
 //	defer cancel()
 //	client := constants.Instance()
-//	search = client.Search().Index("trade").Type("frank")
+//	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 //	agg := elastic.NewTermsAggregation()
 //	query := elastic.NewBoolQuery()
 //	dataType(query, vw.DateType)
@@ -329,7 +329,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 	}
 	defer cancel()
 	client := constants.Instance()
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query = elastic.NewBoolQuery()
 	agg = elastic.NewTermsAggregation()
 	if s.Sort == 2 {
@@ -387,7 +387,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 			count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
 			resCardinality, _ := count.Aggregations.Cardinality("count")
 			total = *resCardinality.Value
-			search = client.Search().Index("trade").Type("frank")
+			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 			search = search.Query(query)
 			search = search.Aggregation("search", agg).RequestCache(true)
 		} else {
@@ -410,7 +410,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 			count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
 			resCardinality, _ := count.Aggregations.Cardinality("count")
 			total = *resCardinality.Value
-			search = client.Search().Index("trade").Type("frank")
+			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 			search = search.Query(query)
 			search = search.Aggregation("search", agg).RequestCache(true)
 		}
@@ -428,7 +428,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
 		resCardinality, _ := count.Aggregations.Cardinality("count")
 		total = *resCardinality.Value
-		search = client.Search().Index("trade").Type("frank")
+		search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 		search = search.Query(query)
 		search = search.Aggregation("search", agg).RequestCache(true)
 	}
@@ -466,7 +466,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		franks = append(franks, frank)
 	}
 	for i := 0; i < len(franks); i++ {
-		search := client.Search().Index("trade").Type("frank")
+		search := client.Search().Index(constants.IndexName).Type(constants.TypeName)
 		query := elastic.NewBoolQuery()
 		query.QueryName("frankDetail")
 		highlight := elastic.NewHighlight()

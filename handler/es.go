@@ -78,7 +78,7 @@ var FrankDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	}
 	defer cancel()
 	client := constants.Instance()
-	search := client.Search().Index("trade").Type("frank")
+	search := client.Search().Index("trade").Type(constants.TypeName)
 	query := elastic.NewBoolQuery()
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 
@@ -168,7 +168,7 @@ func (param *TopTenProduct) Serve(ctx *faygo.Context) error {
 	}
 	defer cancel()
 	client := constants.Instance()
-	TopTenSearch := client.Search().Index("trade").Type("frank")
+	TopTenSearch := client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	var query *elastic.TermQuery
 	if param.CompanyType == 0 {
 		query = elastic.NewTermQuery("PurchaserId", param.CompanyID).QueryName("purchaserId")
@@ -246,7 +246,7 @@ func (param *NewTenFrank) Serve(ctx *faygo.Context) error {
 	}
 	defer cancel()
 	client := constants.Instance()
-	NewTenFrankSearch := client.Search().Index("trade").Type("frank")
+	NewTenFrankSearch := client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query := elastic.NewBoolQuery()
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 
@@ -320,7 +320,7 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	}
 	defer cancel()
 	client := constants.Instance()
-	InfoDetailSearch := client.Search().Index("trade").Type("frank")
+	InfoDetailSearch := client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query := elastic.NewBoolQuery()
 	proKey, err := url.PathUnescape(param.ProKey)
 	if err != nil {
@@ -400,7 +400,7 @@ var findSupplierTop10 = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 //	}
 //	defer cancel()
 //	client := constants.Instance()
-//	ProductListSearch := client.Search().Index("trade").Type("product")
+//	ProductListSearch := client.Search().Index(constants.IndexName).Type("product")
 //	query := elastic.NewBoolQuery()
 //	query = query.Must(elastic.NewMatchQuery("ProductName", strings.ToLower(param.ProKey)))
 //	from := (param.PageNo - 1) * param.PageSize
@@ -422,7 +422,7 @@ var DetailOne = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	DetailOneCtx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 	client := constants.Instance()
-	search := client.Search().Index("trade").Type("frank")
+	search := client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query := elastic.NewBoolQuery()
 	query = query.Must(elastic.NewTermQuery("OrderId", orderID))
 	res, err := search.Size(1).Query(query).Do(DetailOneCtx)
@@ -461,7 +461,7 @@ var ProductList = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	}
 	defer cancel()
 	client := constants.Instance()
-	ProductListSearch := client.Search().Index("trade").Type("product")
+	ProductListSearch := client.Search().Index(constants.IndexName).Type("product")
 	query := elastic.NewBoolQuery()
 	query = query.Must(elastic.NewWildcardQuery("ProductName", "*"+strings.ToLower(param.ProKey)+"*"))
 	from := (param.PageNo - 1) * param.PageSize

@@ -73,7 +73,6 @@ var RedisCache = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		}
 		val, err := redis.Get("POST"+url[0:len(url)-1]).Result()
 		if err == nil {
-			ctx.Log().Info(err)
 			ctx.Stop()
 			return ctx.String(200, val)
 		}

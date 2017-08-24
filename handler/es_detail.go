@@ -17,6 +17,7 @@ import (
 	"github.com/zhangweilun/tradeweb/service"
 	util "github.com/zhangweilun/tradeweb/util"
 	"gopkg.in/olivere/elastic.v5"
+
 )
 
 // CompanyRelations ... 详情
@@ -54,7 +55,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		ParentName: "",
 	}
 	client := constants.Instance()
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query = elastic.NewBoolQuery()
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 
@@ -100,7 +101,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			}
 		}
 		//查采购商 二级 去掉反对应关系
-		serviceTwo := client.Search().Index("trade").Type("frank").Sort("FrankTime", false).Size(5)
+		serviceTwo := client.Search().Index(constants.IndexName).Type(constants.TypeName).Sort("FrankTime", false).Size(5)
 		collapse = elastic.NewCollapseBuilder("PurchaserId").
 			InnerHit(elastic.NewInnerHit().Name("PurchaserId").Size(0).Sort("FrankTime", false)).
 			MaxConcurrentGroupRequests(4)
@@ -133,7 +134,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			}
 		}
 		//查供应商  三级
-		serviceThree := client.Search().Index("trade").Type("frank").Sort("FrankTime", false).Size(10)
+		serviceThree := client.Search().Index(constants.IndexName).Type(constants.TypeName).Sort("FrankTime", false).Size(10)
 		collapse = elastic.NewCollapseBuilder("SupplierId").
 			InnerHit(elastic.NewInnerHit().Name("SupplierId").Size(0).Sort("FrankTime", false)).
 			MaxConcurrentGroupRequests(4)
@@ -189,7 +190,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			}
 		}
 		//查供应商 二级
-		serviceTwo := client.Search().Index("trade").Type("frank").Sort("FrankTime", false).Size(5)
+		serviceTwo := client.Search().Index(constants.IndexName).Type(constants.TypeName).Sort("FrankTime", false).Size(5)
 		collapse = elastic.NewCollapseBuilder("PurchaserId").
 			InnerHit(elastic.NewInnerHit().Name("PurchaserId").Size(0).Sort("FrankTime", false)).
 			MaxConcurrentGroupRequests(4)
@@ -220,7 +221,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			}
 		}
 		//查供应商  三级
-		serviceThree := client.Search().Index("trade").Type("frank").Sort("FrankTime", false).Size(10)
+		serviceThree := client.Search().Index(constants.IndexName).Type(constants.TypeName).Sort("FrankTime", false).Size(10)
 		collapse = elastic.NewCollapseBuilder("SupplierId").
 			InnerHit(elastic.NewInnerHit().Name("SupplierId").Size(0).Sort("FrankTime", false)).
 			MaxConcurrentGroupRequests(4)
@@ -258,7 +259,9 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		List: relationship,
 		Code: 0,
 	})
-	ctx.Log().Error(err)
+	if err != nil {
+		ctx.Log().Error(err)
+	}
 	return ctx.String(200, util.BytesString(result))
 }
 
@@ -291,7 +294,7 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 	}
 	defer cancel()
 	client := constants.Instance()
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query = elastic.NewBoolQuery()
 	agg = elastic.NewSumAggregation()
 	dateAgg = elastic.NewDateHistogramAggregation()
@@ -306,6 +309,9 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 	if detailTrend.DateType == 0 {
 		dateAgg.Field("FrankTime").Interval("month").Format("yyyy-MM-dd")
 		for Index := 0; Index < len(ids); Index++ {
+			query = elastic.NewBoolQuery()
+			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
+			query = query.Filter(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
 			if detailTrend.CompanyType == 0 {
 				query = query.Filter(elastic.NewTermQuery("PurchaserId", ids[Index]))
 			} else {
@@ -314,9 +320,14 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 			companyId, _ := strconv.Atoi(ids[Index])
 			result := model.DetailInfo{ID: companyId}
 			// 最近一年
+			if detailTrend.Vwtype == 0 {
+				agg.Field("OrderVolume")
+			} else {
+				agg.Field("OrderWeight")
+			}
 			query = query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
 			dateAgg.SubAggregation("vwCount", agg)
-			res, err := search.Query(query).Aggregation("detailTrend", dateAgg).Size(1).Do(detailTrendCtx)
+			res, err := search.Query(query).Size(1).Aggregation("detailTrend", dateAgg).Do(detailTrendCtx)
 			if err != nil {
 				ctx.Log().Error(err)
 			}
@@ -344,7 +355,7 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 						value := util.BytesString(data)
 						volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
 						if err != nil {
-							log.Println(err)
+							ctx.Log().Error(err)
 						}
 
 						detail.Value = util.Round(volume, 2)
@@ -353,9 +364,7 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 				result.Trends = append(result.Trends, detail)
 			}
 			results = append(results, result)
-			query = elastic.NewBoolQuery()
-			search = client.Search().Index("trade").Type("frank")
-			query = query.Filter(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
+
 		}
 
 	} else {
@@ -413,7 +422,7 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 			}
 			results = append(results, result)
 			query = elastic.NewBoolQuery()
-			search = client.Search().Index("trade").Type("frank")
+			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 			query = query.Filter(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
 		}
 	}
@@ -460,7 +469,7 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 	}
 	defer cancel()
 	client := constants.Instance()
-	GroupHistorySearch := client.Search().Index("trade").Type("frank")
+	GroupHistorySearch := client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query := elastic.NewBoolQuery()
 	highlight := elastic.NewHighlight()
 	var cardinality *elastic.CardinalityAggregation
@@ -479,7 +488,7 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 		query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyID))
 		cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
 	}
-	countSearch := client.Search().Index("trade").Type("frank")
+	countSearch := client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	count, _ := countSearch.Query(query).Aggregation("count", cardinality).Size(0).Do(GroupHistoryCtx)
 	resCardinality, _ := count.Aggregations.Cardinality("count")
 	//采购进来的
@@ -553,7 +562,7 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 	}
 
 	//获取详细信息
-	search := client.Search().Index("trade").Type("frank")
+	search := client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	search = search.Sort("FrankTime", false).From(0).Size(1)
 	search = search.RequestCache(true)
 	for i := 0; i < len(franks); i++ {
@@ -646,7 +655,7 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 						"ietype":     "0",
 						"shangJiaId": strconv.Itoa(param.CompanyID),
 						//"shangJiaId": "896373",
-						"date_type":  "2",
+						"date_type": "2",
 					},
 					Is_ajax: true,
 				})
@@ -666,7 +675,7 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 						"ietype":     "1",
 						"shangJiaId": strconv.Itoa(param.CompanyID),
 						//"shangJiaId": "896373",
-						"date_type":  "2",
+						"date_type": "2",
 					},
 					Is_ajax: true,
 				})
@@ -690,7 +699,7 @@ type CompanyDistrict struct {
 func (param *CompanyDistrict) Serve(ctx *faygo.Context) error {
 	info := service.GetCompanyDistrictInfo(param.CompanyIDArray, param.CompanyType)
 	result, err := jsoniter.Marshal(model.Response{
-		List:info,
+		List: info,
 	})
 	if err != nil {
 		ctx.Log().Error(err)
