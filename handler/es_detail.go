@@ -737,5 +737,6 @@ type CompanyContacts struct {
 }
 
 func (param *CompanyContacts) Serve(tx *faygo.Context) error {
+	//service.GetCompanyContacts(param.PageNo,param.PageSize,co)
 	return nil
 }
