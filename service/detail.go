@@ -47,7 +47,7 @@ func GetSupplier(companyId int) *model.SuppliersNew {
 		db.Get(&company)
 		suppliersNew.Url = company.CompanyWebsite
 		suppliersNew.LinkPhone = company.LinkPhone
-		db.Update(suppliersNew)
+		//db.Update(suppliersNew)
 	}
 	return &suppliersNew
 }
