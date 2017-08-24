@@ -109,7 +109,7 @@ func GetCompanyDistrictInfo(companyIds string, companyType int) *[]model.MapInfo
 }
 
 
-//
+//GetCompanyContacts 得到公司联系人
 func GetCompanyContacts(companyType int, companyId int)  {
 	
 }
