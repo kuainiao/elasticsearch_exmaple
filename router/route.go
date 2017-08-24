@@ -22,23 +22,22 @@ func Route(frame *faygo.Framework) {
 			frame.NewOPTIONS("/CompanyRelations.go"),
 			frame.NewPOST("/CompanyRelations.go", &handler.CompanyRelations{}).Use(middleware.RedisCache),
 
-
-			//frame.NewOPTIONS("/GroupHistory.go"),
+			frame.NewOPTIONS("/GroupHistory.go"),
 			frame.NewPOST("/GroupHistory.go", &handler.GroupHistory{}).Use(middleware.RedisCache),
 
-			//frame.NewOPTIONS("/NewTenFrank.go"),
+			frame.NewOPTIONS("/NewTenFrank.go"),
 			frame.NewPOST("/NewTenFrank.go", &handler.NewTenFrank{}).Use(middleware.RedisCache),
 
-			//frame.NewOPTIONS("/ProductList.go"),
+			frame.NewOPTIONS("/ProductList.go"),
 			frame.NewPOST("/ProductList.go", &handler.ProductList).Use(middleware.RedisCache),
 
-			//frame.NewOPTIONS("/InfoDetail.go"),
+			frame.NewOPTIONS("/InfoDetail.go"),
 			frame.NewPOST("/InfoDetail.go", &handler.InfoDetail).Use(middleware.RedisCache),
 
-			//frame.NewOPTIONS("/DetailOne.go"),
+			frame.NewOPTIONS("/DetailOne.go"),
 			frame.NewGET("/DetailOne.go", &handler.DetailOne).Use(middleware.RedisCache),
 
-			//frame.NewOPTIONS("/DetailTrend.go"),
+			frame.NewOPTIONS("/DetailTrend.go"),
 			frame.NewPOST("/DetailTrend.go", &handler.DetailTrend{}).Use(middleware.RedisCache),
 
 			frame.NewPOST("/CompanyInfo.html", &handler.CompanyInfo{}),
@@ -46,6 +45,8 @@ func Route(frame *faygo.Framework) {
 			frame.NewPOST("/CompanyList.html", &handler.CompanyList{}),
 
 			frame.NewPOST("/CompanyDistrict.html", &handler.CompanyDistrict{}),
+
+			frame.NewPOST("/CompanyContacts.html", &handler.CompanyContacts{}),
 		),
 
 		frame.NewGroup("/index",

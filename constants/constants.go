@@ -28,8 +28,8 @@ const (
 	ConfigDir = "./config/"
 	//ProductConfigFile product file name
 	ProductConfigFile = "product.ini"
-	IndexName         = "trade"
-	TypeName          = "frank"
+	IndexName         = "trade_new"
+	TypeName          = "frank_new"
 )
 
 var (

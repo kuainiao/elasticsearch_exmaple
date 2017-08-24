@@ -12,6 +12,7 @@ import (
 	"github.com/json-iterator/go"
 	"github.com/zhangweilun/tradeweb/constants"
 
+	"github.com/henrylee2cn/faygo/utils"
 	"github.com/zhangweilun/gor"
 	"github.com/zhangweilun/tradeweb/model"
 	"github.com/zhangweilun/tradeweb/service"
@@ -669,13 +670,12 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 		contacts := service.GetBuyerContacts(param.CompanyID)
 		if len(*contacts) == 0 {
 			//发送请求
-			post, err := gor.Post(constants.Config.GlsUrl,
+			post, err := gor.Post(constants.Config.GlsUrl+"/findDataComList",
 				&gor.Request_options{
 					Json: map[string]string{
 						"ietype":     "0",
 						"shangJiaId": strconv.Itoa(param.CompanyID),
-						//"shangJiaId": "896373",
-						"date_type": "2",
+						"date_type":  "2",
 					},
 					Is_ajax: true,
 				})
@@ -689,13 +689,12 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 		contacts := service.GetSupplierContacts(param.CompanyID)
 		if len(*contacts) == 0 {
 			//发送请求
-			post, err := gor.Post(constants.Config.GlsUrl,
+			post, err := gor.Post(constants.Config.GlsUrl+"/findDataComList",
 				&gor.Request_options{
 					Json: map[string]string{
 						"ietype":     "1",
 						"shangJiaId": strconv.Itoa(param.CompanyID),
-						//"shangJiaId": "896373",
-						"date_type": "2",
+						"date_type":  "2",
 					},
 					Is_ajax: true,
 				})
@@ -729,14 +728,25 @@ func (param *CompanyDistrict) Serve(ctx *faygo.Context) error {
 
 //得到公司联系人
 type CompanyContacts struct {
-	Guid        int `param:"<in:formData> <name:guid> <required:required> <nonzero:nonzero>  <err:guid不能为空!!>  <desc:公司类型>"`
-	PageNo      int `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>   <desc:分页页码>"`
-	PageSize    int `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
-	CompanyID   int `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <err:company_id不能为0>  <desc:公司类型>"`
-	CompanyType int `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
+	Guid        string `param:"<in:formData> <name:guid> <required:required> <nonzero:nonzero>  <err:guid不能为空!!>  <desc:公司类型>"`
+	PageNo      int    `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>   <desc:分页页码>"`
+	PageSize    int    `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
+	CompanyID   int    `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <err:company_id不能为0>  <desc:公司类型>"`
+	CompanyType int    `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
 }
 
-func (param *CompanyContacts) Serve(tx *faygo.Context) error {
-	//service.GetCompanyContacts(param.PageNo,param.PageSize,co)
-	return nil
+func (param *CompanyContacts) Serve(ctx *faygo.Context) error {
+	contacts, err, total := service.GetCompanyContacts(param.PageNo, param.PageSize, param.CompanyType, param.CompanyID, param.Guid)
+	if err != nil {
+		ctx.Log().Error(err)
+		//去请求gls网站
+	}
+	result, err := jsoniter.Marshal(model.Response{
+		List:  contacts,
+		Total: total,
+	})
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+	return ctx.String(200, utils.BytesToString(result))
 }

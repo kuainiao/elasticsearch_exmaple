@@ -44,3 +44,11 @@ func TestGetCompanyDistrictInfo(t *testing.T) {
 		1)
 	fmt.Println(info)
 }
+
+func TestGetCompanyContacts(t *testing.T) {
+	contacts, err := GetCompanyContacts(2, 10, 0, 933070, "khs3UGawcs_vL_39TqZPJw")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(contacts)
+}

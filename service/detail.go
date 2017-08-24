@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"github.com/henrylee2cn/faygo"
 	"github.com/zhangweilun/tradeweb/model"
 	"github.com/zhangweilun/tradeweb/util"
 	"strconv"
@@ -110,25 +109,24 @@ func GetCompanyDistrictInfo(companyIds string, companyType int) *[]model.MapInfo
 }
 
 //GetCompanyContacts 得到公司联系人
-func GetCompanyContacts(pageNo, pageSize, companyType, companyId int, guid string, ctx *faygo.Context) *[]model.Contact {
+func GetCompanyContacts(pageNo, pageSize, companyType, companyId int, guid string) (*[]model.Contact,error,int64) {
 	var contacts []model.Contact
+	var total int64
 	if companyType == 0 {
 		buyer := model.BusinessesNew{Id: int64(companyId)}
 		db.Cols("did_level1").Get(&buyer)
 		contact := model.Contact{BusinessesId: int64(companyId)}
 		count, err := db.Count(&contact)
-		if err != nil {
-			ctx.Log().Error(err)
-		}
 		if count == 0 {
-			return nil
+			return nil,err,0
 		}
-		if buyer.DidLevel1 != 1 {
-			//不为中国
+		total = count
+		if buyer.DidLevel1 == 1 {
+			//中国
 			db.Omit("email", "tel_phone", "other_link").Get(&contact)
 			contacts = append(contacts, contact)
 		} else {
-			//中国
+			//不为中国
 			start := (pageNo - 1) * pageSize
 			db.Limit(pageSize, start).Find(&contacts, contact)
 		}
@@ -137,12 +135,10 @@ func GetCompanyContacts(pageNo, pageSize, companyType, companyId int, guid strin
 		db.Cols("did_level1").Get(&supplier)
 		contact := model.Contact{SuppliersId: int64(companyId)}
 		count, err := db.Count(&contact)
-		if err != nil {
-			ctx.Log().Error(err)
-		}
 		if count == 0 {
-			return nil
+			return nil,err,0
 		}
+		total = count
 		if supplier.DidLevel1 != 1 {
 			//不为中国
 			db.Omit("email", "tel_phone", "other_link").Get(&contact)
@@ -150,8 +146,9 @@ func GetCompanyContacts(pageNo, pageSize, companyType, companyId int, guid strin
 		} else {
 			//中国
 			start := (pageNo - 1) * pageSize
-			db.Limit(pageSize, start).Find(&contacts, contact)
+			db.Limit(pageSize, start).Cols("country","city","other_link","sex",
+				"name","mobile","id","position","tel_phone","depar_name","email").Find(&contacts, contact)
 		}
 	}
-	return &contacts
+	return &contacts,nil,total
 }
