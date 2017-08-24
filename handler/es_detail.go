@@ -58,7 +58,8 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 	query = elastic.NewBoolQuery()
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	proKey, _ := url.PathUnescape(c.ProKey)
-	if c.ProKey != "All Product" {
+	proKey = util.TrimFrontBack(proKey)
+	if proKey != "All Product" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	}
 	if c.CompanyType == 0 {
@@ -107,7 +108,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			MaxConcurrentGroupRequests(4)
 		for i := 0; i < len(relationship.Partner); i++ {
 			query := elastic.NewBoolQuery()
-			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(c.ProKey)))
+			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 			query = query.Must(elastic.NewTermQuery("SupplierId", relationship.Partner[i].CompanyID))
 			query = query.QueryName("filter")
 			res, err := serviceTwo.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
@@ -141,7 +142,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		for i := 0; i < len(relationship.Partner); i++ {
 			for j := 0; j < len(relationship.Partner[i].Partner); j++ {
 				query := elastic.NewBoolQuery()
-				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(c.ProKey)))
+				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[i].Partner[j].CompanyID))
 				query = query.QueryName("filter")
 				res, err := serviceThree.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
@@ -196,7 +197,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			MaxConcurrentGroupRequests(4)
 		for i := 0; i < len(relationship.Partner); i++ {
 			query := elastic.NewBoolQuery()
-			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(c.ProKey)))
+			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 			query = query.Must(elastic.NewTermQuery("SupplierId", relationship.Partner[i].CompanyID))
 			query = query.QueryName("filter")
 			res, err := serviceTwo.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
@@ -228,7 +229,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		for i := 0; i < len(relationship.Partner); i++ {
 			for j := 0; j < len(relationship.Partner[i].Partner); j++ {
 				query := elastic.NewBoolQuery()
-				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(c.ProKey)))
+				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[i].Partner[j].CompanyID))
 				query = query.QueryName("filter")
 				res, err := serviceThree.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
@@ -300,6 +301,7 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 	dateAgg = elastic.NewDateHistogramAggregation()
 	ids := strings.Split(detailTrend.CompanyIDArray, ",")
 	proKey, _ := url.PathUnescape(detailTrend.ProKey)
+	proKey = util.TrimFrontBack(proKey)
 	query = query.Filter(elastic.NewMatchQuery("ProDesc", proKey))
 	var results []model.DetailInfo
 	if detailTrend.Vwtype == 0 {
@@ -487,6 +489,7 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 	query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	proKey, err := url.PathUnescape(param.ProKey)
+	proKey = util.TrimFrontBack(proKey)
 	if err != nil {
 		ctx.Log().Error(err)
 	}
