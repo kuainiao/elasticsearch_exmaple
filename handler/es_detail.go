@@ -689,7 +689,9 @@ type CompanyDistrict struct {
 
 func (param *CompanyDistrict) Serve(ctx *faygo.Context) error {
 	info := service.GetCompanyDistrictInfo(param.CompanyIDArray, param.CompanyType)
-	result, err := jsoniter.Marshal(info)
+	result, err := jsoniter.Marshal(model.Response{
+		List:info,
+	})
 	if err != nil {
 		ctx.Log().Error(err)
 	}

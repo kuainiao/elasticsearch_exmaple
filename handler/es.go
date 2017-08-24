@@ -225,9 +225,6 @@ func (param *TopTenProduct) Serve(ctx *faygo.Context) error {
 
 //NewTenFrank 最新10条交易记录
 //传入参数公司id 公司类型
-//{ "company_type":0, "page_no":1, "page_size":10, "company_id":143382, "pro_key":"", "company_name":"", "time_out":5}
-// status :ok
-
 type NewTenFrank struct {
 	CompanyType int           `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
 	CompanyID   int           `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <err:company_id不能为0>  <desc:公司类型>"`

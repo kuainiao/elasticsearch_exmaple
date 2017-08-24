@@ -87,8 +87,8 @@ func GetCompanyDistrictInfo(companyIds string, companyType int) *[]model.MapInfo
 		fmt.Println(err)
 	}
 	for i := 0; i < len(slice); i++ {
+		info := model.MapInfo{}
 		for k, v := range slice[i] {
-			info := model.MapInfo{}
 			if k == "value" {
 				atoi, _ := strconv.Atoi(util.BytesString(v))
 				info.Value = atoi
@@ -102,8 +102,8 @@ func GetCompanyDistrictInfo(companyIds string, companyType int) *[]model.MapInfo
 			} else {
 				info.Latitude = util.BytesString(v)
 			}
-			maps = append(maps, info)
 		}
+		maps = append(maps, info)
 	}
 	return &maps
 }
