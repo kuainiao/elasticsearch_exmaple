@@ -32,7 +32,8 @@ func GetBuyer(companyId int) *model.BusinessesNew {
 		db.Get(&company)
 		businessesNew.Url = company.CompanyWebsite
 		businessesNew.LinkPhone = company.LinkPhone
-		db.Update(businessesNew)
+		buyerConfition := model.BusinessesNew{Id: int64(companyId)}
+		db.Update(businessesNew, buyerConfition)
 	}
 	return &businessesNew
 
@@ -47,7 +48,8 @@ func GetSupplier(companyId int) *model.SuppliersNew {
 		db.Get(&company)
 		suppliersNew.Url = company.CompanyWebsite
 		suppliersNew.LinkPhone = company.LinkPhone
-		//db.Update(suppliersNew)
+		supplierConfition := model.SuppliersNew{Id: int64(companyId)}
+		db.Update(suppliersNew, supplierConfition)
 	}
 	return &suppliersNew
 }
@@ -109,7 +111,7 @@ func GetCompanyDistrictInfo(companyIds string, companyType int) *[]model.MapInfo
 }
 
 //GetCompanyContacts 得到公司联系人
-func GetCompanyContacts(pageNo, pageSize, companyType, companyId int, guid string) (*[]model.Contact,error,int64) {
+func GetCompanyContacts(pageNo, pageSize, companyType, companyId int, guid string) (*[]model.Contact, error, int64) {
 	var contacts []model.Contact
 	var total int64
 	if companyType == 0 {
@@ -118,7 +120,7 @@ func GetCompanyContacts(pageNo, pageSize, companyType, companyId int, guid strin
 		contact := model.Contact{BusinessesId: int64(companyId)}
 		count, err := db.Count(&contact)
 		if count == 0 {
-			return nil,err,0
+			return nil, err, 0
 		}
 		total = count
 		if buyer.DidLevel1 == 1 {
@@ -136,7 +138,7 @@ func GetCompanyContacts(pageNo, pageSize, companyType, companyId int, guid strin
 		contact := model.Contact{SuppliersId: int64(companyId)}
 		count, err := db.Count(&contact)
 		if count == 0 {
-			return nil,err,0
+			return nil, err, 0
 		}
 		total = count
 		if supplier.DidLevel1 != 1 {
@@ -146,9 +148,9 @@ func GetCompanyContacts(pageNo, pageSize, companyType, companyId int, guid strin
 		} else {
 			//中国
 			start := (pageNo - 1) * pageSize
-			db.Limit(pageSize, start).Cols("country","city","other_link","sex",
-				"name","mobile","id","position","tel_phone","depar_name","email").Find(&contacts, contact)
+			db.Limit(pageSize, start).Cols("country", "city", "other_link", "sex",
+				"name", "mobile", "id", "position", "tel_phone", "depar_name", "email").Find(&contacts, contact)
 		}
 	}
-	return &contacts,nil,total
+	return &contacts, nil, total
 }

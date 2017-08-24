@@ -510,9 +510,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		franks[i].ProDesc = frank.ProDesc
 		franks[i].OriginalCountry = frank.OriginalCountry
 		franks[i].MudiPort = frank.MudiPort
-		//franks[i].PurchaserAddress = frank.PurchaserAddress
 		franks[i].OrderNo = frank.OrderNo
-		//franks[i].SupplierAddress = frank.SupplierAddress
 		franks[i].ProKey = frank.ProKey
 		//设置高亮
 		hight := res.Hits.Hits[0].Highlight
