@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"github.com/henrylee2cn/faygo"
+	"github.com/zhangweilun/gor"
 	"github.com/zhangweilun/tradeweb/model"
 	"github.com/zhangweilun/tradeweb/util"
 	"strconv"
@@ -108,8 +110,30 @@ func GetCompanyDistrictInfo(companyIds string, companyType int) *[]model.MapInfo
 	return &maps
 }
 
-
 //GetCompanyContacts 得到公司联系人
-func GetCompanyContacts(companyType int, companyId int)  {
-	
+func GetCompanyContacts(companyType int, companyId int, guid string, ctx *faygo.Context) *[]model.Contact {
+	var contacts []model.Contact
+	if companyType == 0 {
+		buyer := model.BusinessesNew{Id: int64(companyId)}
+		db.Cols("did_level1").Get(&buyer)
+		contact := model.Contact{BusinessesId: int64(companyId)}
+		count, err := db.Count(&contact)
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+		if count == 0 {
+			return nil
+		}
+		if buyer.DidLevel1 != 1 {
+			//不为中国
+			db.Get(&contact)
+
+		} else {
+			//中国
+		}
+
+	} else {
+		supplier := model.SuppliersNew{Id: int64(companyId)}
+		db.Cols("did_level1").Get(&supplier)
+	}
 }

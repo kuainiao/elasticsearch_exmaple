@@ -299,7 +299,8 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 	agg = elastic.NewSumAggregation()
 	dateAgg = elastic.NewDateHistogramAggregation()
 	ids := strings.Split(detailTrend.CompanyIDArray, ",")
-	query = query.Filter(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
+	proKey, _ := url.PathUnescape(detailTrend.ProKey)
+	query = query.Filter(elastic.NewMatchQuery("ProDesc", proKey))
 	var results []model.DetailInfo
 	if detailTrend.Vwtype == 0 {
 		agg.Field("OrderVolume")
@@ -315,8 +316,8 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 		for Index := 0; Index < forCount; Index++ {
 			query = elastic.NewBoolQuery()
 			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
-			if detailTrend.ProKey != "All Product" {
-				query = query.Filter(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
+			if proKey != "All Product" {
+				query = query.Filter(elastic.NewMatchQuery("ProDesc", proKey))
 			}
 			if detailTrend.CompanyType == 0 {
 				query = query.Filter(elastic.NewTermQuery("PurchaserId", ids[Index]))
@@ -433,7 +434,7 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 			results = append(results, result)
 			query = elastic.NewBoolQuery()
 			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
-			query = query.Filter(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
+			query = query.Filter(elastic.NewMatchQuery("ProDesc", proKey))
 		}
 	}
 	json, err := jsoniter.Marshal(model.Response{
@@ -489,7 +490,7 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 	if err != nil {
 		ctx.Log().Error(err)
 	}
-	if param.ProKey != "All Product" {
+	if proKey != "All Product" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	}
 	highlight.Field("ProDesc")
@@ -585,8 +586,8 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 		} else {
 			queryDeatil = queryDeatil.Must(elastic.NewTermQuery("PurchaserId", franks[i].CompanyId))
 		}
-		if param.ProKey != "" {
-			queryDeatil = queryDeatil.Must(elastic.NewMatchQuery("ProDesc", param.ProKey))
+		if proKey != "" {
+			queryDeatil = queryDeatil.Must(elastic.NewMatchQuery("ProDesc", proKey))
 		}
 		//search.Query(query).Sort("FrankTime", false).From(0).Size(1)
 		search.Query(queryDeatil)
