@@ -68,18 +68,18 @@ func (q *AggCount) Serve(ctx *faygo.Context) error {
 	resultCount := terms.Value
 	result["value"] = int64(*resultCount)
 	result["code"] = 0
-	json, err := jsoniter.Marshal(result)
+	jsonString, err := jsoniter.Marshal(result)
 	if err != nil {
 		ctx.Log().Error(err)
 	}
 	if ctx.HasData("redisKey") {
 		redisKey = ctx.Data("redisKey").(string)
-		err := redis.Set(redisKey, util.BytesString(json), 1*time.Hour).Err()
+		err := redis.Set(redisKey, util.BytesString(jsonString), 1*time.Hour).Err()
 		if err != nil {
 			ctx.Log().Error(err)
 		}
 	}
-	return ctx.String(200, util.BytesString(json))
+	return ctx.String(200, util.BytesString(jsonString))
 }
 
 type CategoryTopTen struct {

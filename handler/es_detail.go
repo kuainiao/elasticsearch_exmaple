@@ -17,7 +17,6 @@ import (
 	"github.com/zhangweilun/tradeweb/service"
 	util "github.com/zhangweilun/tradeweb/util"
 	"gopkg.in/olivere/elastic.v5"
-
 )
 
 // CompanyRelations ... 详情
@@ -309,7 +308,11 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 	}
 	if detailTrend.DateType == 0 {
 		dateAgg.Field("FrankTime").Interval("month").Format("yyyy-MM-dd")
-		for Index := 0; Index < len(ids); Index++ {
+		var forCount int
+		if len(ids) > 10 {
+			forCount = 10
+		}
+		for Index := 0; Index < forCount; Index++ {
 			query = elastic.NewBoolQuery()
 			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 			if detailTrend.ProKey != "All Product" {
@@ -372,7 +375,11 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 
 	} else {
 		dateAgg.Field("FrankTime").Interval("year").Format("yyyy-MM-dd")
-		for Index := 0; Index < len(ids); Index++ {
+		var forCount int
+		if len(ids) > 10 {
+			forCount = 10
+		}
+		for Index := 0; Index < forCount; Index++ {
 			if detailTrend.CompanyType == 0 {
 				query = query.Filter(elastic.NewTermQuery("PurchaserId", ids[Index]))
 			} else {
@@ -710,4 +717,13 @@ func (param *CompanyDistrict) Serve(ctx *faygo.Context) error {
 		ctx.Log().Error(err)
 	}
 	return ctx.String(200, util.BytesString(result))
+}
+
+//得到公司联系人
+type CompanyContacts struct {
+	Guid        int `param:"<in:formData> <name:guid> <required:required> <nonzero:nonzero>  <err:guid不能为空!!>  <desc:公司类型>"`
+	PageNo      int `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>   <desc:分页页码>"`
+	PageSize    int `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
+	CompanyID   int `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero>  <err:company_id不能为0>  <desc:公司类型>"`
+	CompanyType int `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
 }
