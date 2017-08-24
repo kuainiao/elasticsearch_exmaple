@@ -32,8 +32,8 @@ func GetBuyer(companyId int) *model.BusinessesNew {
 		db.Get(&company)
 		businessesNew.Url = company.CompanyWebsite
 		businessesNew.LinkPhone = company.LinkPhone
-		buyerConfition := model.BusinessesNew{Id: int64(companyId)}
-		db.Update(businessesNew, buyerConfition)
+		//buyerConfition := model.BusinessesNew{Id: int64(companyId)}
+		//db.Update(businessesNew, buyerConfition)
 	}
 	return &businessesNew
 
@@ -48,8 +48,8 @@ func GetSupplier(companyId int) *model.SuppliersNew {
 		db.Get(&company)
 		suppliersNew.Url = company.CompanyWebsite
 		suppliersNew.LinkPhone = company.LinkPhone
-		supplierConfition := model.SuppliersNew{Id: int64(companyId)}
-		db.Update(suppliersNew, supplierConfition)
+		//supplierConfition := model.SuppliersNew{Id: int64(companyId)}
+		//db.Update(suppliersNew, supplierConfition)
 	}
 	return &suppliersNew
 }
