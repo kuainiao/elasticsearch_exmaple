@@ -58,9 +58,10 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query = elastic.NewBoolQuery()
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
-
 	proKey, _ := url.PathUnescape(c.ProKey)
-	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+	if c.ProKey != "All Product" {
+		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+	}
 	if c.CompanyType == 0 {
 		query = query.Must(elastic.NewTermQuery("PurchaserId", c.CompanyID))
 		collapse = elastic.NewCollapseBuilder("SupplierId").
@@ -311,7 +312,9 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 		for Index := 0; Index < len(ids); Index++ {
 			query = elastic.NewBoolQuery()
 			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
-			query = query.Filter(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
+			if detailTrend.ProKey != "All Product" {
+				query = query.Filter(elastic.NewMatchQuery("ProDesc", detailTrend.ProKey))
+			}
 			if detailTrend.CompanyType == 0 {
 				query = query.Filter(elastic.NewTermQuery("PurchaserId", ids[Index]))
 			} else {
@@ -479,7 +482,9 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 	if err != nil {
 		ctx.Log().Error(err)
 	}
-	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+	if param.ProKey != "All Product" {
+		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+	}
 	highlight.Field("ProDesc")
 	if param.CompanyType == 0 {
 		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyID))
