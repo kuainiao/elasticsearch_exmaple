@@ -40,12 +40,16 @@ func Route(frame *faygo.Framework) {
 			frame.NewOPTIONS("/DetailTrend.go"),
 			frame.NewPOST("/DetailTrend.go", &handler.DetailTrend{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
+			frame.NewOPTIONS("/CompanyInfo.html"),
 			frame.NewPOST("/CompanyInfo.html", &handler.CompanyInfo{}).Use(middleware.Auth),
 
+			frame.NewOPTIONS("/CompanyList.html"),
 			frame.NewPOST("/CompanyList.html", &handler.CompanyList{}).Use(middleware.Auth),
 
+			frame.NewOPTIONS("/CompanyDistrict.html"),
 			frame.NewPOST("/CompanyDistrict.html", &handler.CompanyDistrict{}).Use(middleware.Auth),
 
+			frame.NewOPTIONS("/CompanyContacts.html"),
 			frame.NewPOST("/CompanyContacts.html", &handler.CompanyContacts{}).Use(middleware.Auth),
 		),
 
