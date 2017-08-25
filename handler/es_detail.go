@@ -682,7 +682,18 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 			if err != nil {
 				ctx.Log().Error(err)
 			}
-			return ctx.String(200, post.String())
+			var result map[string]interface{}
+			if err := jsoniter.Unmarshal(post.Bytes(), &result); err == nil {
+				if i, ok := result["status"]; ok {
+					result["code"] = i
+				}
+				delete(result, "status")
+			}
+			resultJson, err := jsoniter.Marshal(result)
+			if err != nil {
+				ctx.Log().Error(err)
+			}
+			return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, resultJson)
 		}
 		return ctx.JSON(200, model.Response{Data: service.GetBuyerContacts(param.CompanyID)})
 	} else {
@@ -701,7 +712,18 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 			if err != nil {
 				ctx.Log().Error(err)
 			}
-			return ctx.String(200, post.String())
+			var result map[string]interface{}
+			if err := jsoniter.Unmarshal(post.Bytes(), &result); err != nil {
+				if i, ok := result["status"]; ok {
+					result["code"] = i
+				}
+				delete(result, "status")
+			}
+			resultJson, err := jsoniter.Marshal(result)
+			if err != nil {
+				ctx.Log().Error(err)
+			}
+			return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, resultJson)
 		}
 		return ctx.JSON(200, model.Response{Data: service.GetSupplierContacts(param.CompanyID)})
 

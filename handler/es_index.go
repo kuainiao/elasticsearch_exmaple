@@ -301,7 +301,7 @@ type vwDistributed struct {
 type Search struct {
 	CompanyType int           `param:"<in:formData> <name:company_type> <required:required> <err:company_type不能为空！>  <desc:0采购商 1供应商> "`
 	CompanyName string        `param:"<in:formData> <name:company_name> <required:required>  <err:company_name不能为空！>  <desc:0采购商 1供应商> "`
-	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>  <nonzero:nonzero> <err:pro_key不能为空！>  <desc:产品描述>"`
+	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>   <err:pro_key不能为空！>  <desc:产品描述>"`
 	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 	PageNo      int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>   <desc:分页页码>"`
 	PageSize    int           `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
