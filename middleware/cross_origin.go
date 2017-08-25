@@ -12,6 +12,6 @@ import "github.com/henrylee2cn/faygo"
 var CrossOrigin = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	ctx.SetHeader(faygo.HeaderAccessControlAllowOrigin, "*")
 	ctx.SetHeader(faygo.HeaderAccessControlAllowCredentials, "true")
-	ctx.SetHeader(faygo.HeaderAccessControlAllowHeaders, "Origin, X-Requested-With, Content-Type, Accept")
+	ctx.SetHeader(faygo.HeaderAccessControlAllowHeaders, "Origin, X-Requested-With, Content-Type, Accept,Authorization")
 	return nil
 })

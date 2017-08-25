@@ -2,6 +2,7 @@ package model
 
 import (
 	"time"
+	"github.com/dgrijalva/jwt-go"
 )
 
 /**
@@ -150,4 +151,13 @@ type MapInfo struct {
 	Latitude  string `json:"latitude"`
 	Longitude string `json:"longitude"`
 	Did       int    `json:"did"`
+}
+
+type MyCustomClaims struct {
+	// This will hold a users username after authenticating.
+	// Ignore `json:"username"` it's required by JSON
+	Username string `json:"username"`
+
+	// This will hold claims that are recommended having (Expiration, issuer)
+	jwt.StandardClaims
 }

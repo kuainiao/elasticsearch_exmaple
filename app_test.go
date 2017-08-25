@@ -12,6 +12,8 @@ import (
 
 	"github.com/zhangweilun/gor"
 	"strconv"
+	"crypto/md5"
+	"encoding/hex"
 )
 
 /**
@@ -166,4 +168,13 @@ func TestGor(t *testing.T) {
 		fmt.Println(err)
 	}
 	fmt.Println(post.String())
+}
+
+func TestMD5(t *testing.T) {
+	md5Ctx := md5.New()
+	md5Ctx.Write([]byte("gls123"))
+	cipherStr := md5Ctx.Sum(nil)
+	fmt.Print(cipherStr)
+	fmt.Print("\n")
+	fmt.Print(hex.EncodeToString(cipherStr))
 }

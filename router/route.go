@@ -10,34 +10,34 @@ import (
 func Route(frame *faygo.Framework) {
 	frame.Route(
 		frame.NewGroup("/frank",
-			frame.NewOPTIONS("/DetailList.go"),
+			//frame.NewOPTIONS("/DetailList.go"),
 			frame.NewPOST("/DetailList.go", &handler.FrankDetail).Use(middleware.RedisCache),
 
-			frame.NewOPTIONS("/search.go"),
-			frame.NewPOST("/search.go", &handler.Search{}).Use(middleware.RedisCache),
+			//frame.NewOPTIONS("/search.go"),
+			frame.NewPOST("/search.go", &handler.Search{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
-			frame.NewOPTIONS("/topTen.go"),
+			//frame.NewOPTIONS("/topTen.go"),
 			frame.NewPOST("/topTen.go", &handler.TopTenProduct{}).Use(middleware.RedisCache),
 
-			frame.NewOPTIONS("/CompanyRelations.go"),
+			//frame.NewOPTIONS("/CompanyRelations.go"),
 			frame.NewPOST("/CompanyRelations.go", &handler.CompanyRelations{}).Use(middleware.RedisCache),
 
-			frame.NewOPTIONS("/GroupHistory.go"),
+			//frame.NewOPTIONS("/GroupHistory.go"),
 			frame.NewPOST("/GroupHistory.go", &handler.GroupHistory{}).Use(middleware.RedisCache),
 
-			frame.NewOPTIONS("/NewTenFrank.go"),
+			//frame.NewOPTIONS("/NewTenFrank.go"),
 			frame.NewPOST("/NewTenFrank.go", &handler.NewTenFrank{}).Use(middleware.RedisCache),
 
-			frame.NewOPTIONS("/ProductList.go"),
+			//frame.NewOPTIONS("/ProductList.go"),
 			frame.NewPOST("/ProductList.go", &handler.ProductList).Use(middleware.RedisCache),
 
-			frame.NewOPTIONS("/InfoDetail.go"),
+			//frame.NewOPTIONS("/InfoDetail.go"),
 			frame.NewPOST("/InfoDetail.go", &handler.InfoDetail).Use(middleware.RedisCache),
 
-			frame.NewOPTIONS("/DetailOne.go"),
+			//frame.NewOPTIONS("/DetailOne.go"),
 			frame.NewGET("/DetailOne.go", &handler.DetailOne).Use(middleware.RedisCache),
 
-			frame.NewOPTIONS("/DetailTrend.go"),
+			//frame.NewOPTIONS("/DetailTrend.go"),
 			frame.NewPOST("/DetailTrend.go", &handler.DetailTrend{}).Use(middleware.RedisCache),
 
 			frame.NewPOST("/CompanyInfo.html", &handler.CompanyInfo{}),
@@ -60,7 +60,9 @@ func Route(frame *faygo.Framework) {
 			frame.NewGET("/CategoryProductTopTen.go", &handler.CategoryProductTopTen{}).Use(middleware.RedisCache),
 		),
 
-		frame.NewNamedAPI("Index", "GET", "/", handler.Index),
+		frame.NewPOST("/login.html", &handler.Login{}),
+		//倒的执行
+		frame.NewNamedAPI("Index", "GET", "/", handler.Index).Use(middleware.RedisCache).Use(middleware.Auth),
 		frame.NewNamedAPI("test struct handler", "POST", "/test", &handler.Test{}).
 			Use(middleware.Token),
 	).Use(middleware.CrossOrigin)

@@ -3,6 +3,9 @@ package service
 import (
 	"fmt"
 	"testing"
+	"github.com/zhangweilun/tradeweb/model"
+	"crypto/md5"
+	"encoding/hex"
 )
 
 /**
@@ -16,9 +19,7 @@ func TestGetDidNameByDid(t *testing.T) {
 	did := GetDidNameByDid(3)
 	fmt.Println(did)
 }
-func TestMoveFrank(t *testing.T) {
-	MoveFrank("as", "asd")
-}
+
 
 func TestGetSupplier(t *testing.T) {
 	supplier := GetSupplier(507834)
@@ -46,9 +47,24 @@ func TestGetCompanyDistrictInfo(t *testing.T) {
 }
 
 func TestGetCompanyContacts(t *testing.T) {
-	contacts, err := GetCompanyContacts(2, 10, 0, 933070, "khs3UGawcs_vL_39TqZPJw")
+	contacts, err ,_:= GetCompanyContacts(2, 10, 0, 933070, "khs3UGawcs_vL_39TqZPJw")
 	if err != nil {
 		fmt.Println(err)
 	}
 	fmt.Println(contacts)
 }
+
+func TestGetUserByCondition(t *testing.T) {
+	md5Ctx := md5.New()
+	md5Ctx.Write([]byte("gls123"))
+	cipherStr := md5Ctx.Sum(nil)
+	fmt.Println(hex.EncodeToString(cipherStr))
+	users := model.Users{
+		UserName: "admin",
+		Passwd:  hex.EncodeToString(cipherStr),
+	}
+	count, _ := GetUserByCondition(&users)
+
+	fmt.Println(count)
+}
+
