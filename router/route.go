@@ -51,13 +51,13 @@ func Route(frame *faygo.Framework) {
 
 		frame.NewGroup("/index",
 			frame.NewOPTIONS("/AggCount.go"),
-			frame.NewGET("/AggCount.go", &handler.AggCount{}).Use(middleware.RedisCache),
+			frame.NewGET("/AggCount.go", &handler.AggCount{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/CategoryTopTen.go"),
-			frame.NewGET("/CategoryTopTen.go", &handler.CategoryTopTen{}).Use(middleware.RedisCache),
+			frame.NewGET("/CategoryTopTen.go", &handler.CategoryTopTen{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/CategoryProductTopTen.go"),
-			frame.NewGET("/CategoryProductTopTen.go", &handler.CategoryProductTopTen{}).Use(middleware.RedisCache),
+			frame.NewGET("/CategoryProductTopTen.go", &handler.CategoryProductTopTen{}).Use(middleware.RedisCache).Use(middleware.Auth),
 		),
 
 		frame.NewPOST("/login.html", &handler.Login{}),
