@@ -345,7 +345,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 			company, err := getSpecificCompany(client, s.CompanyType, s.Sort, s.CompanyName, proKey, SearchCtx)
 			if err != nil {
 				ctx.Log().Error(err.Error())
-			}else {
+			} else {
 				total = total + 1
 				franks = append(franks, *company)
 			}
@@ -601,14 +601,21 @@ func getSpecificCompany(client *elastic.Client, CompanyType, Sort int, CompanyNa
 	if CompanyType == 0 {
 		query = query.Must(elastic.NewTermQuery("PurchaserId", frank.CompanyId))
 		if CompanyName != "" {
-			query = query.Must(elastic.NewMatchQuery("Purchaser", CompanyName))
-			highlight.Field("Purchaser")
+			for i := 0; i < len(constants.Stopwords); i++ {
+				if strings.Contains(strings.ToLower(CompanyName), constants.Stopwords[i]) {
+					query = query.Must(elastic.NewMatchQuery("Purchaser", CompanyName))
+					highlight.Field("Purchaser")
+				}
+			}
 		}
+
 	} else {
 		query = query.Must(elastic.NewTermQuery("SupplierId", frank.CompanyId))
 		if CompanyName != "" {
-			query = query.Must(elastic.NewMatchQuery("Supplier", CompanyName))
-			highlight.Field("Supplier")
+			for i := 0; i < len(constants.Stopwords); i++ {
+				query = query.Must(elastic.NewMatchQuery("Supplier", CompanyName))
+				highlight.Field("Supplier")
+			}
 		}
 	}
 	highlight = highlight.PreTags(`<font color="#FF0000">`).PostTags("</font>")

@@ -21,6 +21,7 @@ import (
 
 const (
 	Secret = "zhangweilun"
+
 	esHost = "es.g2l-service.com"
 	// esHost = "192.168.1.15:9200"
 	//DateFormat = "2006-01-02 15:04:05"
@@ -34,6 +35,9 @@ const (
 )
 
 var (
+	Stopwords = []string{
+		"global",
+	}
 	es            *elastic.Client
 	re            *redis.Client
 	elasticSingle sync.Once
