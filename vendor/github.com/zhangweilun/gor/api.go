@@ -1,18 +1,18 @@
 package gor
 
 /**
-* 
+*
 * @author willian
 * @created 2017-01-24 18:43
-* @email 18702515157@163.com  
+* @email 18702515157@163.com
 **/
 
 // Get takes 2 parameters and returns a Response struct. These two options are:
 // 	1. A URL
 // 	2. A Request_options struct
 // If you do not intend to use the `Request_options` you can just pass nil
-func Get(url string, ro *Request_options) (*Response,error) {
-	return reg("GET",url,ro)
+func Get(url string, ro *Request_options) (*Response, error) {
+	return reg("GET", url, ro)
 }
 
 // Put takes 2 parameters and returns a Response struct. These two options are:

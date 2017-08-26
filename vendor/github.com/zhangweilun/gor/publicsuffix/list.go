@@ -1,4 +1,3 @@
-
 package publicsuffix
 
 //cookie的域名后缀
@@ -8,7 +7,6 @@ import (
 	"net/http/cookiejar"
 	"strings"
 )
-
 
 var List cookiejar.PublicSuffixList = list{}
 

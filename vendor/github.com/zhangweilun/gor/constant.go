@@ -1,15 +1,15 @@
 package gor
 
 import (
-	"time"
 	"errors"
+	"time"
 )
 
 /**
-* 
+*
 * @author willian
 * @created 2017-01-24 13:38
-* @email 18702515157@163.com  
+* @email 18702515157@163.com
 **/
 const (
 	localUserAgent = "GRequests/0.10"

@@ -9,6 +9,7 @@ import (
 
 	"github.com/zhangweilun/gor"
 	"github.com/zhangweilun/goxmlpath"
+	"strings"
 )
 
 /**
@@ -93,4 +94,12 @@ var Words = func() []string {
 		result = append(result, tuple[0])
 	}
 	return result
+}
+
+//去除前后空格
+func TrimFrontBack(s string) string {
+	word := "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM"
+	indexAny := strings.IndexAny(s, word)
+	lastIndexAny := strings.LastIndexAny(s, word)
+	return s[indexAny : lastIndexAny+1]
 }

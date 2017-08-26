@@ -1,12 +1,12 @@
 package gor
 
 import (
-	"net/http"
 	"bytes"
+	"encoding/xml"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
-	"encoding/xml"
 )
 
 type Response struct {
@@ -27,29 +27,28 @@ type Response struct {
 	Header http.Header
 
 	internalByteBuffer *bytes.Buffer
-
 }
 
 func build_response(res *http.Response, err error) (*Response, error) {
 	if err != nil {
-		return &Response{Error:err},err
-	}else {
+		return &Response{Error: err}, err
+	} else {
 		response := &Response{
-			Ok:                res.StatusCode >= 200 && res.StatusCode < 300,
-			Error:             nil,
-			RawResponse:       res,
-			Status:            res.StatusCode,
-			Header:            res.Header,
-			internalByteBuffer:bytes.NewBuffer([]byte{}),
+			Ok:                 res.StatusCode >= 200 && res.StatusCode < 300,
+			Error:              nil,
+			RawResponse:        res,
+			Status:             res.StatusCode,
+			Header:             res.Header,
+			internalByteBuffer: bytes.NewBuffer([]byte{}),
 		}
-		return response,nil
+		return response, nil
 	}
 }
 
-func (res *Response) Read(p []byte) (n int, err error)  {
+func (res *Response) Read(p []byte) (n int, err error) {
 	if res.Error != nil {
-		return -1,res.Error
-	}else {
+		return -1, res.Error
+	} else {
 		return res.RawResponse.Body.Read(p)
 	}
 }

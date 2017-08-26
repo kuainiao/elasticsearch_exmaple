@@ -1,10 +1,13 @@
 package middleware
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/henrylee2cn/faygo"
 	"github.com/zhangweilun/tradeweb/constants"
+
+	"strconv"
 )
 
 /**
@@ -31,17 +34,49 @@ var RedisCache = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		}
 		ctx.SetData("redisKey", "GET"+url)
 	} else if ctx.Method() == "POST" {
-		url := ctx.URI()
+		url := ctx.URI() + "?"
+		var ids []int
+		var idArray string
 		params := ctx.FormParamAll()
-		for k, v := range params {
-			url = url + "?" + k + "=" + v[0]
+		if v, ok := params["company_ids"]; ok {
+			value := v[0]
+			split := strings.Split(value, ",")
+			for i := 0; i < len(split); i++ {
+				atoi, err := strconv.Atoi(split[i])
+				if err != nil {
+					ctx.Log().Error(err)
+				}
+				ids = append(ids, atoi)
+			}
 		}
-		val, err := redis.Get("GET" + url).Result()
+		var queryKey []string
+		for k := range params {
+			queryKey = append(queryKey, k)
+		}
+		sort.Strings(queryKey)
+		for index := 0; index < len(queryKey); index++ {
+			for k, v := range params {
+				if queryKey[index] == k {
+					if k != "token" && k != "userId" {
+						if k == "company_ids" {
+							for i := 0; i < len(ids); i++ {
+								idArray = idArray + strconv.Itoa(ids[i])
+							}
+							url = url + queryKey[index] + "=" + idArray + "&"
+						} else {
+							url = url + queryKey[index] + "=" + v[0] + "&"
+						}
+
+					}
+				}
+			}
+		}
+		val, err := redis.Get("POST"+url[0:len(url)-1]).Result()
 		if err == nil {
 			ctx.Stop()
 			return ctx.String(200, val)
 		}
-		ctx.SetData("redisKey", "POST"+url)
+		ctx.SetData("redisKey", "POST"+url[0:len(url)-1])
 	}
 	return nil
 })

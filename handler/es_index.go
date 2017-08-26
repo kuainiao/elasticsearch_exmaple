@@ -2,17 +2,21 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
+	"log"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/henrylee2cn/faygo"
+	"github.com/henrylee2cn/faygo/errors"
 	"github.com/henrylee2cn/faygo/ext/db/xorm"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/json-iterator/go"
 	"github.com/zhangweilun/tradeweb/constants"
 	"github.com/zhangweilun/tradeweb/model"
-	util "github.com/zhangweilun/tradeweb/util"
-	elastic "gopkg.in/olivere/elastic.v5"
+	"github.com/zhangweilun/tradeweb/util"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 var redis = constants.Redis()
@@ -39,7 +43,7 @@ func (q *AggCount) Serve(ctx *faygo.Context) error {
 	AggCountCtx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 	client := constants.Instance()
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type("frank")
 	query := elastic.NewBoolQuery()
 	dataType(query, q.DateType)
 	district(query, q.DistrictID, q.DistrictLevel, q.IeType)
@@ -59,24 +63,24 @@ func (q *AggCount) Serve(ctx *faygo.Context) error {
 	} else {
 		vwCount = elastic.NewSumAggregation().Field("OrderWeight")
 	}
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type("frank")
 	res, _ := search.Query(query).Aggregation("vwCount", vwCount).RequestCache(true).Size(0).Do(AggCountCtx)
 	terms, _ := res.Aggregations.Sum("vwCount")
 	resultCount := terms.Value
 	result["value"] = int64(*resultCount)
 	result["code"] = 0
-	json, err := jsoniter.Marshal(result)
+	jsonString, err := jsoniter.Marshal(result)
 	if err != nil {
 		ctx.Log().Error(err)
 	}
 	if ctx.HasData("redisKey") {
 		redisKey = ctx.Data("redisKey").(string)
-		err := redis.Set(redisKey, util.BytesString(json), 1*time.Hour).Err()
+		err := redis.Set(redisKey, util.BytesString(jsonString), 1*time.Hour).Err()
 		if err != nil {
 			ctx.Log().Error(err)
 		}
 	}
-	return ctx.String(200, util.BytesString(json))
+	return ctx.String(200, util.BytesString(jsonString))
 }
 
 type CategoryTopTen struct {
@@ -88,7 +92,7 @@ type CategoryTopTen struct {
 	DateType int `param:"<in:query> <name:date_type> <desc:date_type 时间过滤>"`
 }
 
-//行业排名
+//Serve 行业排名
 //getIndustryTop10 get
 func (c *CategoryTopTen) Serve(ctx *faygo.Context) error {
 	var (
@@ -102,7 +106,7 @@ func (c *CategoryTopTen) Serve(ctx *faygo.Context) error {
 	AggCountCtx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 	client := constants.Instance()
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query := elastic.NewBoolQuery()
 	dataType(query, c.DateType)
 	district(query, c.DistrictID, c.DistrictLevel, c.IeType)
@@ -174,7 +178,7 @@ func (p *CategoryProductTopTen) Serve(ctx *faygo.Context) error {
 	AggCountCtx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 	client := constants.Instance()
-	search = client.Search().Index("trade").Type("frank")
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query := elastic.NewBoolQuery()
 	dataType(query, p.DateType)
 	district(query, p.DistrictID, p.DistrictLevel, p.IeType)
@@ -193,7 +197,7 @@ func (p *CategoryProductTopTen) Serve(ctx *faygo.Context) error {
 	for i := 0; i < len(terms.Buckets); i++ {
 		ProductId := terms.Buckets[i].Key.(float64)
 		var productNew model.ProductNew
-		productNew.Id = int(ProductId)
+		productNew.Id = int64(ProductId)
 		ok, err := db.Get(&productNew)
 		if !ok {
 			ctx.Log().Error(err)
@@ -253,7 +257,7 @@ type vwDistributed struct {
 //	vwDistributedCtx, cancel = context.WithCancel(context.Background())
 //	defer cancel()
 //	client := constants.Instance()
-//	search = client.Search().Index("trade").Type("frank")
+//	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 //	agg := elastic.NewTermsAggregation()
 //	query := elastic.NewBoolQuery()
 //	dataType(query, vw.DateType)
@@ -293,3 +297,367 @@ type vwDistributed struct {
 //	search = search.Query(query).Aggregation("search", agg).RequestCache(true)
 //	return nil
 //}
+
+//Search 首页搜索的结构
+type Search struct {
+	CompanyType int           `param:"<in:formData> <name:company_type> <required:required> <err:company_type不能为空！>  <desc:0采购商 1供应商> "`
+	CompanyName string        `param:"<in:formData> <name:company_name> <required:required>  <err:company_name不能为空！>  <desc:0采购商 1供应商> "`
+	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>   <err:pro_key不能为空！>  <desc:产品描述>"`
+	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	PageNo      int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>   <desc:分页页码>"`
+	PageSize    int           `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
+	Sort        int           `param:"<in:formData> <name:sort> <required:required>  <err:sort不能为空！>  <desc:排序的参数 1 2 3>"`
+}
+
+func (s *Search) Serve(ctx *faygo.Context) error {
+	var (
+		SearchCtx   context.Context
+		cancel      context.CancelFunc
+		cardinality *elastic.CardinalityAggregation
+		agg         *elastic.TermsAggregation
+		search      *elastic.SearchService
+		query       *elastic.BoolQuery
+		redisKey    string
+		total       float64
+		franks      []model.Frank
+	)
+	if s.CompanyName == "" && s.ProKey == "" {
+		return ctx.String(400, "prokey和公司名不能同时为空!!1")
+	}
+	if s.TimeOut != 0 {
+		SearchCtx, cancel = context.WithTimeout(context.Background(), s.TimeOut*time.Second)
+	} else {
+		SearchCtx, cancel = context.WithCancel(context.Background())
+	}
+	defer cancel()
+	client := constants.Instance()
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
+	query = elastic.NewBoolQuery()
+
+	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
+	proKey, _ := url.PathUnescape(s.ProKey)
+	if proKey != "" {
+		proKey = util.TrimFrontBack(proKey)
+	}
+	//判断是否全称存在
+	if s.CompanyName != "" {
+		if s.PageNo == 1 {
+			company, err := getSpecificCompany(client, s.CompanyType, s.Sort, s.CompanyName, proKey, SearchCtx)
+			if err != nil {
+				ctx.Log().Error(err.Error())
+			} else {
+				total = total + 1
+				franks = append(franks, *company)
+			}
+		}
+	}
+	query = elastic.NewBoolQuery()
+	agg = elastic.NewTermsAggregation()
+	if s.Sort == 2 {
+		agg = agg.OrderByAggregation("volume", false)
+
+	} else if s.Sort == -2 {
+		agg = agg.OrderByAggregation("volume", true)
+
+	} else if s.Sort == 3 {
+		agg = agg.OrderByAggregation("weight", false)
+
+	} else if s.Sort == -3 {
+		agg = agg.OrderByAggregation("weight", true)
+
+	} else if s.Sort == 1 {
+		agg = agg.OrderByCount(false)
+
+	} else if s.Sort == -1 {
+		agg = agg.OrderByCount(true)
+
+	} else {
+		agg = agg.OrderByCount(false)
+	}
+	agg.Size(s.PageSize * s.PageNo)
+	weightAgg := elastic.NewSumAggregation().Field("OrderWeight")
+	volumeAgg := elastic.NewSumAggregation().Field("OrderVolume")
+	agg = agg.SubAggregation("weight", weightAgg)
+	agg = agg.SubAggregation("volume", volumeAgg)
+	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
+	if proKey != "" {
+		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+	}
+	if s.CompanyType == 0 {
+		cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
+		agg.Field("PurchaserId")
+		if s.CompanyName != "" {
+			query = query.Must(elastic.NewMatchQuery("Purchaser", strings.ToLower(s.CompanyName)))
+		}
+	} else {
+		cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
+		agg.Field("SupplierId")
+		if s.CompanyName != "" {
+			query = query.Must(elastic.NewMatchQuery("Supplier", strings.ToLower(s.CompanyName)))
+		}
+	}
+	count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
+	resCardinality, _ := count.Aggregations.Cardinality("count")
+	total = total + *resCardinality.Value
+	if len(franks) > 0 {
+		//已经有完整匹配
+		agg.Size(s.PageSize*s.PageNo - 1)
+	} else {
+		agg.Size(s.PageSize * s.PageNo)
+	}
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
+	search = search.Query(query)
+	search = search.Aggregation("search", agg).RequestCache(true)
+	res, _ := search.Size(0).Do(SearchCtx)
+	aggregations := res.Aggregations
+	terms, _ := aggregations.Terms("search")
+	//增加一个数组 容量等于前端请求的pageSize，循环purchaseId获取详细信息
+	for i := (s.PageNo - 1) * s.PageSize; i < len(terms.Buckets); i++ {
+		companyId := terms.Buckets[i].Key.(float64)
+		tradeNumber := terms.Buckets[i].DocCount
+		frank := model.Frank{
+			CompanyId:   int64(companyId),
+			TradeNumber: tradeNumber,
+		}
+		for k, v := range terms.Buckets[i].Aggregations {
+			data, _ := v.MarshalJSON()
+			if k == "volume" {
+				value := util.BytesString(data)
+				volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
+				if err != nil {
+					log.Println(err)
+				}
+				frank.OrderVolume = util.Round(volume, 2)
+			}
+			if k == "weight" {
+				value := util.BytesString(data)
+				weight, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
+				if err != nil {
+					log.Println(err)
+				}
+				frank.OrderWeight = util.Round(weight, 2)
+			}
+		}
+		franks = append(franks, frank)
+	}
+	for i := 0; i < len(franks); i++ {
+		search := client.Search().Index(constants.IndexName).Type(constants.TypeName)
+		query := elastic.NewBoolQuery()
+		query.QueryName("frankDetail")
+		highlight := elastic.NewHighlight()
+		if s.CompanyType == 0 {
+			query = query.Must(elastic.NewTermQuery("PurchaserId", franks[i].CompanyId))
+			if s.CompanyName != "" {
+				query = query.Must(elastic.NewMatchQuery("Purchaser", strings.ToLower(s.CompanyName)))
+				highlight.Field("Purchaser")
+			}
+		} else {
+			query = query.Must(elastic.NewTermQuery("SupplierId", franks[i].CompanyId))
+			if s.CompanyName != "" {
+				query = query.Must(elastic.NewMatchQuery("Supplier", strings.ToLower(s.CompanyName)))
+				highlight.Field("Supplier")
+			}
+		}
+		highlight = highlight.PreTags(`<font color="#FF0000">`).PostTags("</font>")
+		proKey, _ := url.PathUnescape(s.ProKey)
+		if s.ProKey != "" {
+			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+			highlight.Field("ProDesc")
+		}
+		search.Query(query).Highlight(highlight).Sort("FrankTime", false).From(0).Size(1)
+		search.RequestCache(true)
+		res, _ := search.Do(SearchCtx)
+		var frank model.Frank
+		detail := res.Hits.Hits[0].Source
+		jsonObject, _ := detail.MarshalJSON()
+		json.Unmarshal(jsonObject, &frank)
+		if s.CompanyType == 0 {
+			franks[i].CompanyName = frank.Purchaser
+			franks[i].CompanyId = frank.PurchaserId
+		} else {
+			franks[i].CompanyName = frank.Supplier
+			franks[i].CompanyId = frank.SupplierId
+		}
+		franks[i].FrankTime = frank.FrankTime
+		franks[i].QiyunPort = frank.QiyunPort
+		franks[i].OrderId = frank.OrderId
+		franks[i].ProDesc = frank.ProDesc
+		franks[i].OriginalCountry = frank.OriginalCountry
+		franks[i].MudiPort = frank.MudiPort
+		franks[i].OrderNo = frank.OrderNo
+		franks[i].ProKey = frank.ProKey
+		//设置高亮
+		hight := res.Hits.Hits[0].Highlight
+		if s.ProKey != "" {
+			franks[i].ProDesc = hight["ProDesc"][0]
+		}
+		if s.CompanyName != "" {
+			if s.CompanyType == 0 {
+				franks[i].CompanyName = hight["Purchaser"][0]
+			} else {
+				franks[i].CompanyName = hight["Supplier"][0]
+			}
+		}
+	}
+
+	result, err := jsoniter.Marshal(model.Response{
+		List:  franks,
+		Code:  0,
+		Total: int64(total),
+	})
+
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+
+	if ctx.HasData("redisKey") {
+		redisKey = ctx.Data("redisKey").(string)
+		err := redis.Set(redisKey, util.BytesString(result), 1*time.Hour).Err()
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+	}
+	return ctx.String(200, util.BytesString(result))
+}
+
+//完整匹配
+func getSpecificCompany(client *elastic.Client, CompanyType, Sort int, CompanyName string, proKey string, SearchCtx context.Context) (*model.Frank, error) {
+	search := client.Search().Index(constants.IndexName).Type(constants.TypeName)
+	query := elastic.NewBoolQuery()
+	agg := elastic.NewTermsAggregation()
+	agg.Size(1)
+	if Sort == 2 {
+		agg = agg.OrderByAggregation("volume", false)
+
+	} else if Sort == -2 {
+		agg = agg.OrderByAggregation("volume", true)
+
+	} else if Sort == 3 {
+		agg = agg.OrderByAggregation("weight", false)
+
+	} else if Sort == -3 {
+		agg = agg.OrderByAggregation("weight", true)
+
+	} else if Sort == 1 {
+		agg = agg.OrderByCount(false)
+
+	} else if Sort == -1 {
+		agg = agg.OrderByCount(true)
+
+	} else {
+		agg = agg.OrderByCount(false)
+	}
+	if CompanyType == 0 {
+		query = query.Filter(elastic.NewTermQuery("Purchaser.keyword", strings.ToUpper(CompanyName)))
+	} else {
+		query = query.Filter(elastic.NewTermQuery("Supplier.keyword", strings.ToUpper(CompanyName)))
+	}
+	if proKey != "" {
+		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+	}
+	//存在全称匹配
+	if CompanyType == 0 {
+		agg.Field("PurchaserId")
+	} else {
+		agg.Field("SupplierId")
+	}
+	search = search.Aggregation("search", agg).RequestCache(true)
+	res, _ := search.Query(query).Size(0).Do(SearchCtx)
+	aggregations := res.Aggregations
+	terms, _ := aggregations.Terms("search")
+	if len(terms.Buckets) == 0 {
+		return nil, errors.New("没有完整匹配")
+	}
+	//增加一个数组 容量等于前端请求的pageSize，循环purchaseId获取详细信息
+	companyId := terms.Buckets[0].Key.(float64)
+	tradeNumber := terms.Buckets[0].DocCount
+	frank := model.Frank{
+		CompanyId:   int64(companyId),
+		TradeNumber: tradeNumber,
+	}
+	for k, v := range terms.Buckets[0].Aggregations {
+		data, _ := v.MarshalJSON()
+		if k == "volume" {
+			value := util.BytesString(data)
+			volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
+			if err != nil {
+				log.Println(err)
+			}
+			frank.OrderVolume = util.Round(volume, 2)
+		}
+		if k == "weight" {
+			value := util.BytesString(data)
+			weight, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
+			if err != nil {
+				log.Println(err)
+			}
+			frank.OrderWeight = util.Round(weight, 2)
+		}
+	}
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
+	query = elastic.NewBoolQuery()
+	query.QueryName("frankDetail")
+	highlight := elastic.NewHighlight()
+	if CompanyType == 0 {
+		query = query.Must(elastic.NewTermQuery("PurchaserId", frank.CompanyId))
+		if CompanyName != "" {
+			for i := 0; i < len(constants.Stopwords); i++ {
+				if strings.Contains(strings.ToLower(CompanyName), constants.Stopwords[i]) {
+					query = query.Must(elastic.NewMatchQuery("Purchaser", CompanyName))
+					highlight.Field("Purchaser")
+				}
+			}
+		}
+
+	} else {
+		query = query.Must(elastic.NewTermQuery("SupplierId", frank.CompanyId))
+		if CompanyName != "" {
+			for i := 0; i < len(constants.Stopwords); i++ {
+				query = query.Must(elastic.NewMatchQuery("Supplier", CompanyName))
+				highlight.Field("Supplier")
+			}
+		}
+	}
+	highlight = highlight.PreTags(`<font color="#FF0000">`).PostTags("</font>")
+
+	if proKey != "" {
+		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+		highlight.Field("ProDesc")
+	}
+	search.Query(query).Highlight(highlight).Sort("FrankTime", false).From(0).Size(1)
+	search.RequestCache(true)
+	res, _ = search.Do(SearchCtx)
+	var frankDetail model.Frank
+	detail := res.Hits.Hits[0].Source
+	jsonObject, _ := detail.MarshalJSON()
+	json.Unmarshal(jsonObject, &frankDetail)
+	if CompanyType == 0 {
+		frank.CompanyName = frankDetail.Purchaser
+		frank.CompanyId = frankDetail.PurchaserId
+	} else {
+		frank.CompanyName = frankDetail.Supplier
+		frank.CompanyId = frankDetail.SupplierId
+	}
+	frank.FrankTime = frankDetail.FrankTime
+	frank.QiyunPort = frankDetail.QiyunPort
+	frank.OrderId = frankDetail.OrderId
+	frank.ProDesc = frankDetail.ProDesc
+	frank.OriginalCountry = frankDetail.OriginalCountry
+	frank.MudiPort = frankDetail.MudiPort
+	frank.OrderNo = frankDetail.OrderNo
+	frank.ProKey = frankDetail.ProKey
+	//设置高亮
+	hight := res.Hits.Hits[0].Highlight
+	if proKey != "" {
+		frank.ProDesc = hight["ProDesc"][0]
+	}
+	if CompanyName != "" {
+		if CompanyType == 0 {
+			frank.CompanyName = hight["Purchaser"][0]
+		} else {
+			frank.CompanyName = hight["Supplier"][0]
+		}
+	}
+
+	return &frank, nil
+}

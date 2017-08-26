@@ -20,6 +20,8 @@ import (
 **/
 
 const (
+	Secret = "zhangweilun"
+
 	esHost = "es.g2l-service.com"
 	// esHost = "192.168.1.15:9200"
 	//DateFormat = "2006-01-02 15:04:05"
@@ -28,9 +30,14 @@ const (
 	ConfigDir = "./config/"
 	//ProductConfigFile product file name
 	ProductConfigFile = "product.ini"
+	IndexName         = "trade"
+	TypeName          = "frank"
 )
 
 var (
+	Stopwords = []string{
+		"global",
+	}
 	es            *elastic.Client
 	re            *redis.Client
 	elasticSingle sync.Once
@@ -70,6 +77,7 @@ type ProductConfig struct {
 	RedisAddr string `ini:"redis_addr" comment:"redis_addr address"`
 	RedisPass string `ini:"redis_pass" comment:"redis_pass "`
 	RedisDb   int    `ini:"redis_db" comment:"redis_pass "`
+	GlsUrl    string `ini:"gls_url" comment:"redis_pass "`
 }
 
 //Config Product Config

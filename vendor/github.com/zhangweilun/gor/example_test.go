@@ -1,19 +1,19 @@
 package gor
 
 import (
+	"encoding/xml"
+	"io"
 	"log"
-	"testing"
 	"net/http"
 	"net/url"
-	"io"
-	"encoding/xml"
+	"testing"
 )
 
 /**
-* 
+*
 * @author willian
 * @created 2017-01-24 19:18
-* @email 18702515157@163.com  
+* @email 18702515157@163.com
 **/
 
 func Test_get(t *testing.T) {
@@ -308,7 +308,7 @@ func Example_postXML() {
 func Example_postJSONAJAX() {
 	resp, err := Post("http://httpbin.org/post",
 		&Request_options{
-			Json:   map[string]string{"One": "Two"},
+			Json:    map[string]string{"One": "Two"},
 			Is_ajax: true, // this adds the X-Requested-With: XMLHttpRequest header
 		})
 

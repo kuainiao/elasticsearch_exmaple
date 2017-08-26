@@ -1,6 +1,8 @@
 package service
 
-import "github.com/henrylee2cn/faygo/ext/db/xorm"
+import (
+	"github.com/henrylee2cn/faygo/ext/db/xorm"
+)
 
 /**
 *
