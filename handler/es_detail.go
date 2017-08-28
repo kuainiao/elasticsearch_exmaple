@@ -111,7 +111,9 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			MaxConcurrentGroupRequests(4)
 		for i := 0; i < len(relationship.Partner); i++ {
 			query := elastic.NewBoolQuery()
-			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+			if proKey != "All Product" && proKey != "" {
+				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+			}
 			query = query.Must(elastic.NewTermQuery("SupplierId", relationship.Partner[i].CompanyID))
 			query = query.QueryName("filter")
 			res, err := serviceTwo.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
@@ -145,7 +147,9 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		for i := 0; i < len(relationship.Partner); i++ {
 			for j := 0; j < len(relationship.Partner[i].Partner); j++ {
 				query := elastic.NewBoolQuery()
-				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+				if proKey != "All Product" && proKey != "" {
+					query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+				}
 				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[i].Partner[j].CompanyID))
 				query = query.QueryName("filter")
 				res, err := serviceThree.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
@@ -200,7 +204,9 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			MaxConcurrentGroupRequests(4)
 		for i := 0; i < len(relationship.Partner); i++ {
 			query := elastic.NewBoolQuery()
-			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+			if proKey != "All Product" && proKey != "" {
+				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+			}
 			query = query.Must(elastic.NewTermQuery("SupplierId", relationship.Partner[i].CompanyID))
 			query = query.QueryName("filter")
 			res, err := serviceTwo.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
@@ -232,7 +238,9 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		for i := 0; i < len(relationship.Partner); i++ {
 			for j := 0; j < len(relationship.Partner[i].Partner); j++ {
 				query := elastic.NewBoolQuery()
-				query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+				if proKey != "All Product" && proKey != "" {
+					query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+				}
 				query = query.Must(elastic.NewTermQuery("PurchaserId", relationship.Partner[i].Partner[j].CompanyID))
 				query = query.QueryName("filter")
 				res, err := serviceThree.Query(query).Collapse(collapse).Do(CompanyRelationsCtx)
@@ -272,7 +280,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 //DetailTrend ...
 //findBusinessTrendInfo.php
 type DetailTrend struct {
-	ProKey         string        `param:"<in:formData> <name:pro_key> <required:required>  <nonzero:nonzero> <err:pro_key不能为空或者空字符串！>  <desc:产品描述>"`
+	ProKey         string        `param:"<in:formData> <name:pro_key> <required:required>   <err:pro_key不能为空或者空字符串！>  <desc:产品描述>"`
 	CompanyIDArray string        `param:"<in:formData> <name:company_ids> <required:required> <nonzero:nonzero>  <desc:采购商或者供应商公司id> "`
 	CompanyType    int           `param:"<in:formData> <name:company_type> <required:required>   <desc:0采购商 1供应商> "`
 	TimeOut        time.Duration `param:"<in:formData>  <name:time_out>  <desc:该接口的最大响应时间> "`
@@ -304,8 +312,12 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 	dateAgg = elastic.NewDateHistogramAggregation()
 	ids := strings.Split(detailTrend.CompanyIDArray, ",")
 	proKey, _ := url.PathUnescape(detailTrend.ProKey)
-	proKey = util.TrimFrontBack(proKey)
-	query = query.Filter(elastic.NewMatchQuery("ProDesc", proKey))
+	if proKey != "" {
+		proKey = util.TrimFrontBack(proKey)
+	}
+	if proKey != "All Product" && proKey != "" {
+		query = query.Filter(elastic.NewMatchQuery("ProDesc", proKey))
+	}
 	var results []model.DetailInfo
 	if detailTrend.Vwtype == 0 {
 		agg.Field("OrderVolume")
@@ -323,7 +335,7 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 		for Index := 0; Index < forCount; Index++ {
 			query = elastic.NewBoolQuery()
 			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
-			if proKey != "All Product" {
+			if proKey != "All Product" && proKey != "" {
 				query = query.Filter(elastic.NewMatchQuery("ProDesc", proKey))
 			}
 			if detailTrend.CompanyType == 0 {
@@ -443,7 +455,9 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 			results = append(results, result)
 			query = elastic.NewBoolQuery()
 			search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
-			query = query.Filter(elastic.NewMatchQuery("ProDesc", proKey))
+			if proKey != "All Product" && proKey != "" {
+				query = query.Filter(elastic.NewMatchQuery("ProDesc", proKey))
+			}
 		}
 	}
 	json, err := jsoniter.Marshal(model.Response{
@@ -463,7 +477,7 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 }
 
 type GroupHistory struct {
-	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>  <nonzero:nonzero>  <err:pro_key不能为空或者空字符串！>  <desc:产品描述>"`
+	ProKey      string        `param:"<in:formData> <name:pro_key> <required:required>   <err:pro_key不能为空或者空字符串！>  <desc:产品描述>"`
 	PageNo      int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>  <desc:分页页码>"`
 	PageSize    int           `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
 	CompanyType int           `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
@@ -496,11 +510,13 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 	query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	proKey, err := url.PathUnescape(param.ProKey)
-	proKey = util.TrimFrontBack(proKey)
+	if proKey != "" {
+		proKey = util.TrimFrontBack(proKey)
+	}
 	if err != nil {
 		ctx.Log().Error(err)
 	}
-	if proKey != "All Product" {
+	if proKey != "All Product" && proKey != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	}
 	highlight.Field("ProDesc")
@@ -651,13 +667,14 @@ type CompanyInfo struct {
 	TimeOut     time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 }
 
+//Serve 处理方法
 func (param *CompanyInfo) Serve(ctx *faygo.Context) error {
 	if param.CompanyType == 0 {
 		//service.GetBuyer(param.CompanyID)
 		return ctx.JSON(200, model.Response{Data: service.GetBuyer(param.CompanyID)})
-	} else {
-		return ctx.JSON(200, model.Response{Data: service.GetSupplier(param.CompanyID)})
 	}
+	return ctx.JSON(200, model.Response{Data: service.GetSupplier(param.CompanyID)})
+
 }
 
 //公司列表
@@ -732,22 +749,34 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 	}
 }
 
-//采购商或者供应商地图分布
+//CompanyDistrict 采购商或者供应商地图分布
 type CompanyDistrict struct {
-	CompanyIDArray string        `param:"<in:formData> <name:company_ids> <required:required> <nonzero:nonzero> <err:company_ids不能为空或空字符串> <desc:采购商或者供应商公司id> "`
+	CompanyIDArray string        `param:"<in:formData> <name:company_ids> <required:required>  <err:company_ids不能为空或空字符串> <desc:采购商或者供应商公司id> "`
 	CompanyType    int           `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
 	TimeOut        time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 }
 
+//CompanyDistrict
 func (param *CompanyDistrict) Serve(ctx *faygo.Context) error {
-	info := service.GetCompanyDistrictInfo(param.CompanyIDArray, param.CompanyType)
-	result, err := jsoniter.Marshal(model.Response{
-		List: info,
-	})
-	if err != nil {
-		ctx.Log().Error(err)
+	var result []byte
+	var err error
+	if param.CompanyIDArray == "" {
+		var a map[string]interface{}
+		a["code"] = 0
+		result, err = jsoniter.Marshal(a)
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+	} else {
+		info := service.GetCompanyDistrictInfo(param.CompanyIDArray, param.CompanyType)
+		result, err = jsoniter.Marshal(model.Response{
+			List: info,
+		})
+		if err != nil {
+			ctx.Log().Error(err)
+		}
 	}
-	return ctx.String(200, util.BytesString(result))
+	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
 }
 
 //得到公司联系人

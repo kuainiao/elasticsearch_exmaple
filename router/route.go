@@ -32,7 +32,7 @@ func Route(frame *faygo.Framework) {
 			frame.NewPOST("/ProductList.go", &handler.ProductList).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/InfoDetail.go"),
-			frame.NewPOST("/InfoDetail.go", &handler.InfoDetail).Use(middleware.RedisCache).Use(middleware.Auth),
+			frame.NewPOST("/InfoDetail.go", &handler.InfoDetail{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/DetailOne.go"),
 			frame.NewGET("/DetailOne.go", &handler.DetailOne).Use(middleware.RedisCache).Use(middleware.Auth),
@@ -62,6 +62,12 @@ func Route(frame *faygo.Framework) {
 
 			frame.NewOPTIONS("/CategoryProductTopTen.go"),
 			frame.NewGET("/CategoryProductTopTen.go", &handler.CategoryProductTopTen{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/FindMaoInfo.html"),
+			frame.NewPOST("/FindMaoInfo.html", &handler.FindMaoInfo{}).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/CategoryTopTenArea.html"),
+			frame.NewPOST("/CategoryTopTenArea.html", &handler.CategoryTopTenArea{}).Use(middleware.RedisCache).Use(middleware.Auth),
 		),
 
 		frame.NewPOST("/login.html", &handler.Login{}),

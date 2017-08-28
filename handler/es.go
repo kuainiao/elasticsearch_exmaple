@@ -302,16 +302,22 @@ func (param *NewTenFrank) Serve(ctx *faygo.Context) error {
 //InfoDetail ...
 //参数 供应商id 采购商id 参数proKey
 // status: ok
-var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
+type InfoDetail struct {
+	CompanyType     int           `param:"<in:formData> <name:company_type> <required:required> <err:company_type不能为空！>  <desc:0采购商 1供应商> "`
+	PageNo          int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>   <desc:分页页码>"`
+	PageSize        int           `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
+	CompanyID       string        `param:"<in:formData> <name:company_id> <required:required> <nonzero:nonzero> <err:company_id不能为空！>  <desc:0采购商 1供应商> "`
+	ProKey          string        `param:"<in:formData> <name:pro_key> <required:required>   <err:pro_key不能为空！>  <desc:产品描述>"`
+	LinkedCompanyID int           `param:"<in:formData> <name:linked_company_id> <required:required>  <nonzero:nonzero> <err:linked_company_id不能为空和0！>  <desc:产品描述>"`
+	TimeOut         time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+}
+
+//Serve ss
+func (param *InfoDetail) Serve(ctx *faygo.Context) error {
 	var (
 		infoDetailCtx context.Context
 		cancel        context.CancelFunc
 	)
-	var param DetailQuery
-	err := ctx.BindJSON(&param)
-	if err != nil {
-		ctx.Log().Error(err)
-	}
 	if param.TimeOut != 0 {
 		infoDetailCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
 	} else {
@@ -325,16 +331,18 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 	if err != nil {
 		ctx.Log().Error(err)
 	}
-	query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+	if proKey != "All Product" && proKey != "" {
+		query = query.Filter(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
+	}
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 
 	query.Filter(elastic.NewRangeQuery("FrankTime").From("now-1y").To("now"))
 	if param.CompanyType == 0 {
-		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyId))
-		query = query.Must(elastic.NewTermQuery("SupplierId", param.LinkedCompanyId))
+		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyID))
+		query = query.Must(elastic.NewTermQuery("SupplierId", param.LinkedCompanyID))
 	} else {
-		query = query.Must(elastic.NewTermQuery("PurchaserId", param.LinkedCompanyId))
-		query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyId))
+		query = query.Must(elastic.NewTermQuery("PurchaserId", param.LinkedCompanyID))
+		query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyID))
 	}
 	from := (param.PageNo - 1) * param.PageSize
 	res, err := InfoDetailSearch.Query(query).From(from).Size(param.PageSize).Do(infoDetailCtx)
@@ -363,7 +371,7 @@ var InfoDetail = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 		Code:  0,
 		Total: res.Hits.TotalHits,
 	})
-})
+}
 
 //findSupplierTop10 ...
 //{"did":0,"pid":"15","dlevel":0,"ietype":0,"vwtype":0,"token":"user:3183b6956804427f91d7b624db09e547","userId":"1","date_type":2}

@@ -3,7 +3,7 @@
     "go.formatTool": "goreturns",
     "go.gopath": "C:\\Users\\william\\Destop\\tradeweb",
     // "go.gopath": "/Users/willian/Desktop/project/go/tradeweb",
-    // "go.goroot": "/usr/local/opt/go/libexec",
+    "go.goroot": "/usr/local/opt/go/libexec",
     "go.inferGopath": true,
     "files.autoSave": "onFocusChange",
     "go.gocodeAutoBuild": true    

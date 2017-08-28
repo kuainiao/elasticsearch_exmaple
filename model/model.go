@@ -2,6 +2,7 @@ package model
 
 import (
 	"time"
+
 	"github.com/dgrijalva/jwt-go"
 )
 
@@ -129,9 +130,11 @@ type Relationship struct {
 }
 
 type Category struct {
-	CategoryName string  `json:"cnameEn"`
-	CategoryId   int     `json:"cid"`
-	Value        float64 `json:"value"`
+	CategoryName string  `json:"cnameEn,omitempty"`
+	CategoryId   int     `json:"cid,omitempty"`
+	Value        float64 `json:"value,omitempty"`
+	Dname        string  `json:"dnameEn,omitempty"`
+	Did          int64  `json:"did,omitempty"`
 }
 
 type DetailInfo struct {

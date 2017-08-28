@@ -1,11 +1,12 @@
 package service
 
 import (
-	"fmt"
-	"testing"
-	"github.com/zhangweilun/tradeweb/model"
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
+	"testing"
+
+	"github.com/zhangweilun/tradeweb/model"
 )
 
 /**
@@ -19,7 +20,6 @@ func TestGetDidNameByDid(t *testing.T) {
 	did := GetDidNameByDid(3)
 	fmt.Println(did)
 }
-
 
 func TestGetSupplier(t *testing.T) {
 	supplier := GetSupplier(507834)
@@ -47,7 +47,7 @@ func TestGetCompanyDistrictInfo(t *testing.T) {
 }
 
 func TestGetCompanyContacts(t *testing.T) {
-	contacts, err ,_:= GetCompanyContacts(2, 10, 0, 933070, "khs3UGawcs_vL_39TqZPJw")
+	contacts, err, _ := GetCompanyContacts(2, 10, 0, 933070, "khs3UGawcs_vL_39TqZPJw")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -61,10 +61,14 @@ func TestGetUserByCondition(t *testing.T) {
 	fmt.Println(hex.EncodeToString(cipherStr))
 	users := model.Users{
 		UserName: "admin",
-		Passwd:  hex.EncodeToString(cipherStr),
+		Passwd:   hex.EncodeToString(cipherStr),
 	}
 	count, _ := GetUserByCondition(&users)
 
 	fmt.Println(count)
 }
 
+func TestGetMapInfo(t *testing.T) {
+	maps := GetMapInfo(0, 2, 0, 0, 0, 0)
+	fmt.Println(maps)
+}
