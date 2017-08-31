@@ -66,6 +66,33 @@ var (
 		"Arts and Antiques":                21,
 		"Unspecified":                      22,
 	}
+	CategoryMapInt = map[int]string{
+		1:  "Animal Products",
+		2:  "Vegetable Products",
+		3:  "Animal and Vegetable Bi-Products",
+		4:  "Foodstuffs",
+		5:  "Mineral Products",
+		6:  "Chemical Products",
+		7:  "Plastics and Rubbers",
+		8:  "Animal Hides",
+		9:  "Wood Products",
+		10: "Paper Goods",
+		11: "Textiles",
+		12: "Footwear and Headwear",
+		13: "Stone And Glass",
+		14: "Precious Metals",
+		15: "Metals",
+		16: "Machines",
+		17: "Transportation",
+		18: "Instruments",
+		19: "Weapons",
+		20: "Miscellaneous",
+		21: "Arts and Antiques",
+		22: "Unspecified",
+	}
+	TopTenCategoryId = []int{
+		20, 17, 7, 16, 11, 4, 15, 2, 13, 6,
+	}
 )
 
 //ProductConfig product config struct

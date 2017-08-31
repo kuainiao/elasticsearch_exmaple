@@ -68,6 +68,15 @@ func Route(frame *faygo.Framework) {
 
 			frame.NewOPTIONS("/CategoryTopTenArea.html"),
 			frame.NewPOST("/CategoryTopTenArea.html", &handler.CategoryTopTenArea{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/CategoryProductTopTenArea.html"),
+			frame.NewPOST("/CategoryProductTopTenArea.html", &handler.CategoryProductTopTenArea{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/CategoryCompanyTopTen.html"),
+			frame.NewPOST("/CategoryCompanyTopTen.html", &handler.CategoryCompanyTopTen{}).Use(middleware.RedisCache),
+
+			frame.NewOPTIONS("/CategoryVwTimeFilter.html"),
+			frame.NewPOST("/CategoryVwTimeFilter.html", &handler.CategoryVwTimeFilter{}).Use(middleware.RedisCache),
 		),
 
 		frame.NewPOST("/login.html", &handler.Login{}),

@@ -130,11 +130,12 @@ type Relationship struct {
 }
 
 type Category struct {
-	CategoryName string  `json:"cnameEn,omitempty"`
-	CategoryId   int     `json:"cid,omitempty"`
-	Value        float64 `json:"value,omitempty"`
-	Dname        string  `json:"dnameEn,omitempty"`
-	Did          int64  `json:"did,omitempty"`
+	CategoryName string        `json:"cnameEn,omitempty"`
+	CategoryId   int           `json:"cid,omitempty"`
+	Value        float64       `json:"value,omitempty"`
+	Dname        string        `json:"dnameEn,omitempty"`
+	Did          int64         `json:"did,omitempty"`
+	StatisList   []DetailTrand `json:"statisList"`
 }
 
 type DetailInfo struct {

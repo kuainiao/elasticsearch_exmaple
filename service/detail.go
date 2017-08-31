@@ -2,9 +2,10 @@ package service
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/zhangweilun/tradeweb/model"
 	"github.com/zhangweilun/tradeweb/util"
-	"strconv"
 )
 
 /**
@@ -18,7 +19,7 @@ func GetDidNameByDid(districtId int64) string {
 	district := model.District{
 		Did: districtId,
 	}
-	db.Get(&district)
+	db.Cols("dname_en").Get(&district)
 	return district.DnameEn
 }
 
