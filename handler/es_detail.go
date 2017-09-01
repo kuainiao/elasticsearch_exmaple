@@ -473,7 +473,7 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 			ctx.Log().Error(err)
 		}
 	}
-	return ctx.String(200, util.BytesString(json))
+	return ctx.String(200, faygo.MIMEApplicationJSONCharsetUTF8, json)
 }
 
 type GroupHistory struct {

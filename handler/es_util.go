@@ -1,6 +1,8 @@
 package handler
 
-import elastic "gopkg.in/olivere/elastic.v5"
+import (
+	elastic "gopkg.in/olivere/elastic.v5"
+)
 
 //date_type 0all year 1the last six month 2the last one year 3the last three year 时间过滤
 func dataType(q *elastic.BoolQuery, dataType int) {
@@ -20,12 +22,17 @@ func district(q *elastic.BoolQuery, districtId int, districtLevel int, ietype in
 	} else {
 		ids = []string{"SupplierDistrictId1", "SupplierDistrictId2", "SupplierDistrictId3"}
 	}
-	if districtLevel == 1 {
+
+	//0 全球 1 国家 2 省
+	if districtLevel == 0 {
+		//q = q.Must(elastic.NewTermQuery(ids[0], districtId))
+		q = q.MustNot(elastic.NewTermQuery(ids[0], 0))
+	} else if districtLevel == 1 {
 		q = q.Must(elastic.NewTermQuery(ids[0], districtId))
+		q = q.MustNot(elastic.NewTermQuery(ids[0], 0))
 	} else if districtLevel == 2 {
 		q = q.Must(elastic.NewTermQuery(ids[1], districtId))
-	} else if districtLevel == 3 {
-		q = q.Must(elastic.NewTermQuery(ids[2], districtId))
+		q = q.MustNot(elastic.NewTermQuery(ids[1], 0))
 	}
 }
 

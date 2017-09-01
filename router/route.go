@@ -77,6 +77,9 @@ func Route(frame *faygo.Framework) {
 
 			frame.NewOPTIONS("/CategoryVwTimeFilter.html"),
 			frame.NewPOST("/CategoryVwTimeFilter.html", &handler.CategoryVwTimeFilter{}).Use(middleware.RedisCache),
+
+			frame.NewOPTIONS("/GlobalImport.html"),
+			frame.NewPOST("/GlobalImport.html", &handler.GlobalImport{}).Use(middleware.RedisCache),
 		),
 
 		frame.NewPOST("/login.html", &handler.Login{}),

@@ -691,13 +691,15 @@ func (param *FindMaoInfo) Serve(ctx *faygo.Context) error {
 	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
 }
 
-//CategoryTopTenArea top10行业的国家分布
+//CategoryTopTenArea top10行业的国家分布 下面第一个表
 type CategoryTopTenArea struct {
-	CategoryID int           `param:"<in:formData> <name:cid> <required:required> <err:cid不能为空！>  <desc:0采购商 1供应商> "`
-	VwType     int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0采购商 1供应商> "`
-	Ietype     int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
-	DateType   int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
-	TimeOut    time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	CategoryID    int           `param:"<in:formData> <name:cid> <required:required> <err:cid不能为空！>  <desc:0采购商 1供应商> "`
+	VwType        int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0采购商 1供应商> "`
+	Ietype        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
+	DateType      int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
+	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	DistrictID    int           `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:0采购商 1供应商> "`
+	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:0采购商 1供应商> "`
 }
 
 func (param *CategoryTopTenArea) Serve(ctx *faygo.Context) error {
@@ -722,14 +724,24 @@ func (param *CategoryTopTenArea) Serve(ctx *faygo.Context) error {
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	categoryFilter(query, param.CategoryID)
 	dataType(query, param.DateType)
+	district(query, param.DistrictID, param.DistrictLevel, param.Ietype)
 	if param.Ietype == 0 {
-		agg.Field("PurchaserDistrictId1")
-		query = query.MustNot(elastic.NewTermQuery("PurchaserDistrictId1", 0))
+		if param.DistrictLevel == 0 {
+			agg.Field("PurchaserDistrictId1")
+		} else if param.DistrictLevel == 1 {
+			agg.Field("PurchaserDistrictId2")
+		} else if param.DistrictLevel == 2 {
+			agg.Field("PurchaserDistrictId3")
+		}
 	} else {
-		agg.Field("SupplierDistrictId1")
-		query = query.MustNot(elastic.NewTermQuery("SupplierDistrictId1", 0))
+		if param.DistrictLevel == 0 {
+			agg.Field("SupplierDistrictId1")
+		} else if param.DistrictLevel == 1 {
+			agg.Field("SupplierDistrictId2")
+		} else if param.DistrictLevel == 2 {
+			agg.Field("SupplierDistrictId3")
+		}
 	}
-
 	agg.Size(10)
 	if param.VwType == 0 {
 		volumeAgg := elastic.NewSumAggregation().Field("OrderVolume")
@@ -791,13 +803,15 @@ func (param *CategoryTopTenArea) Serve(ctx *faygo.Context) error {
 	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
 }
 
-//CategoryProductTopTenArea top10产品的国家分布
+//CategoryProductTopTenArea top10产品的国家分布 下面第二个表
 type CategoryProductTopTenArea struct {
-	ProductID int           `param:"<in:formData> <name:pid> <required:required>  <err:pid不能为空！>  <desc:0采购商 1供应商> "`
-	DateType  int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
-	VwType    int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0采购商 1供应商> "`
-	Ietype    int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
-	TimeOut   time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	ProductID     int           `param:"<in:formData> <name:pid> <required:required>  <err:pid不能为空！>  <desc:0采购商 1供应商> "`
+	DateType      int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
+	VwType        int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0采购商 1供应商> "`
+	Ietype        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
+	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	DistrictID    int           `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:0采购商 1供应商> "`
+	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:0采购商 1供应商> "`
 }
 
 //Serve 处理方法
@@ -822,13 +836,24 @@ func (param *CategoryProductTopTenArea) Serve(ctx *faygo.Context) error {
 	agg = elastic.NewTermsAggregation()
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	dataType(query, param.DateType)
+	district(query, param.DistrictID, param.DistrictLevel, param.Ietype)
 	productFilter(query, param.ProductID)
 	if param.Ietype == 0 {
-		agg.Field("PurchaserDistrictId1")
-		query = query.MustNot(elastic.NewTermQuery("PurchaserDistrictId1", 0))
+		if param.DistrictLevel == 0 {
+			agg.Field("PurchaserDistrictId1")
+		} else if param.DistrictLevel == 1 {
+			agg.Field("PurchaserDistrictId2")
+		} else if param.DistrictLevel == 2 {
+			agg.Field("PurchaserDistrictId3")
+		}
 	} else {
-		agg.Field("SupplierDistrictId1")
-		query = query.MustNot(elastic.NewTermQuery("SupplierDistrictId1", 0))
+		if param.DistrictLevel == 0 {
+			agg.Field("SupplierDistrictId1")
+		} else if param.DistrictLevel == 1 {
+			agg.Field("SupplierDistrictId2")
+		} else if param.DistrictLevel == 2 {
+			agg.Field("SupplierDistrictId3")
+		}
 	}
 	agg.Size(10)
 	if param.VwType == 0 {
@@ -893,7 +918,9 @@ func (param *CategoryProductTopTenArea) Serve(ctx *faygo.Context) error {
 
 //CategorySupplierTopTen 每一个行业的top10供应商 下面第三个表
 type CategoryCompanyTopTen struct {
-	CategoryID int `param:"<in:formData> <name:cid> <required:required> <err:cid不能为空！>  <desc:0采购商 1供应商> "`
+	CategoryID    int `param:"<in:formData> <name:cid> <required:required> <err:cid不能为空！>  <desc:0采购商 1供应商> "`
+	DistrictID    int `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:0采购商 1供应商> "`
+	DistrictLevel int `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:0采购商 1供应商> "`
 	//VwType     int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0采购商 1供应商> "`
 	Ietype   int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
 	DateType int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
@@ -920,18 +947,29 @@ func (param *CategoryCompanyTopTen) Serve(ctx *faygo.Context) error {
 	query = elastic.NewBoolQuery()
 	agg = elastic.NewTermsAggregation()
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
+	district(query, param.DistrictID, param.DistrictLevel, param.Ietype)
 	dataType(query, param.DateType)
 	categoryFilter(query, param.CategoryID)
 	if param.Ietype == 0 {
-		agg.Field("PurchaserDistrictId1")
-		query = query.MustNot(elastic.NewTermQuery("PurchaserDistrictId1", 0))
+		if param.DistrictLevel == 0 {
+			agg.Field("PurchaserDistrictId1")
+		} else if param.DistrictLevel == 1 {
+			agg.Field("PurchaserDistrictId2")
+		} else if param.DistrictLevel == 2 {
+			agg.Field("PurchaserDistrictId3")
+		}
 		purchaser := elastic.NewTermsAggregation().Field("PurchaserId")
 		purchaser.Size(1)
 		agg = agg.SubAggregation("purchaser", purchaser)
 		agg.OrderByCountDesc()
 	} else {
-		agg.Field("SupplierDistrictId1")
-		query = query.MustNot(elastic.NewTermQuery("SupplierDistrictId1", 0))
+		if param.DistrictLevel == 0 {
+			agg.Field("SupplierDistrictId1")
+		} else if param.DistrictLevel == 1 {
+			agg.Field("SupplierDistrictId2")
+		} else if param.DistrictLevel == 2 {
+			agg.Field("SupplierDistrictId3")
+		}
 		supplier := elastic.NewTermsAggregation().Field("SupplierId")
 		supplier.Size(1)
 		agg = agg.SubAggregation("supplier", supplier)
@@ -1056,4 +1094,81 @@ func (param *CategoryVwTimeFilter) Serve(ctx *faygo.Context) error {
 		}
 	}
 	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, jsonResult)
+}
+
+//GlobalImport 右侧第一个图
+type GlobalImport struct {
+	VwType int `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0volume 1weight> "`
+	//Ietype   int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
+	DateType int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
+	TimeOut  time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+}
+
+func (param *GlobalImport) Serve(ctx *faygo.Context) error {
+	var (
+		searchCtx context.Context
+		cancel    context.CancelFunc
+		search    *elastic.SearchService
+		query     *elastic.BoolQuery
+		agg       *elastic.SumAggregation
+		dateAgg   *elastic.DateHistogramAggregation
+		redisKey  string
+	)
+	if param.TimeOut != 0 {
+		searchCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
+	} else {
+		searchCtx, cancel = context.WithCancel(context.Background())
+	}
+	defer cancel()
+	client := constants.Instance()
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
+	agg = elastic.NewSumAggregation()
+	query = elastic.NewBoolQuery()
+	dateAgg = elastic.NewDateHistogramAggregation()
+	dateAgg.Field("FrankTime").Interval("month").Format("yyyy-MM-dd")
+	var trends []model.DetailTrand
+	dataType(query, param.DateType)
+	if param.VwType == 0 {
+		agg.Field("OrderVolume")
+	} else {
+		agg.Field("OrderWeight")
+	}
+	dateAgg.SubAggregation("vwCount", agg)
+	res, err := search.Query(query).Aggregation("GlobalImport", dateAgg).Do(searchCtx)
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+	aggregations := res.Aggregations
+	terms, _ := aggregations.DateHistogram("GlobalImport")
+	for i := 0; i < len(terms.Buckets); i++ {
+		dateString := terms.Buckets[i].KeyAsString
+		detail := model.DetailTrand{YearMonth: *dateString}
+		for k, v := range terms.Buckets[i].Aggregations {
+			data, _ := v.MarshalJSON()
+			if k == "vwCount" {
+				value := util.BytesString(data)
+				volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
+				if err != nil {
+					ctx.Log().Error(err)
+				}
+
+				detail.Value = util.Round(volume, 2)
+			}
+		}
+		trends = append(trends, detail)
+	}
+	result, err := jsoniter.Marshal(model.Response{
+		List: trends,
+	})
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+	if ctx.HasData("redisKey") {
+		redisKey = ctx.Data("redisKey").(string)
+		err := redis.Set(redisKey, util.BytesString(result), 1*time.Hour).Err()
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+	}
+	return ctx.String(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
 }

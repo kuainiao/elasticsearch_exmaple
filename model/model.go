@@ -135,7 +135,7 @@ type Category struct {
 	Value        float64       `json:"value,omitempty"`
 	Dname        string        `json:"dnameEn,omitempty"`
 	Did          int64         `json:"did,omitempty"`
-	StatisList   []DetailTrand `json:"statisList"`
+	StatisList   []DetailTrand `json:"statisList,omitempty"`
 }
 
 type DetailInfo struct {

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 echo '请输入要提交的注释信息:'
 
 read msg
