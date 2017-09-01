@@ -22,17 +22,16 @@ func district(q *elastic.BoolQuery, districtId int, districtLevel int, ietype in
 	} else {
 		ids = []string{"SupplierDistrictId1", "SupplierDistrictId2", "SupplierDistrictId3"}
 	}
-
 	//0 全球 1 国家 2 省
 	if districtLevel == 0 {
 		//q = q.Must(elastic.NewTermQuery(ids[0], districtId))
 		q = q.MustNot(elastic.NewTermQuery(ids[0], 0))
 	} else if districtLevel == 1 {
 		q = q.Must(elastic.NewTermQuery(ids[0], districtId))
-		q = q.MustNot(elastic.NewTermQuery(ids[0], 0))
+		q = q.MustNot(elastic.NewTermQuery(ids[1], 0))
 	} else if districtLevel == 2 {
 		q = q.Must(elastic.NewTermQuery(ids[1], districtId))
-		q = q.MustNot(elastic.NewTermQuery(ids[1], 0))
+		q = q.MustNot(elastic.NewTermQuery(ids[2], 0))
 	}
 }
 

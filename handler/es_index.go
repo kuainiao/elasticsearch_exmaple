@@ -85,6 +85,7 @@ func (q *AggCount) Serve(ctx *faygo.Context) error {
 	return ctx.String(200, util.BytesString(jsonString))
 }
 
+//CategoryTopTen 左边第一个表
 type CategoryTopTen struct {
 	DistrictID    int `param:"<in:query> <name:did> <desc:地区id 0为全球>"`
 	DistrictLevel int `param:"<in:query> <desc:地区等级> <name:dlevel>"`
@@ -157,7 +158,7 @@ func (c *CategoryTopTen) Serve(ctx *faygo.Context) error {
 	return ctx.String(200, util.BytesString(result))
 }
 
-//行业下产品排名 首页 左二
+//行业下产品排名 首页 左边第二个图
 type CategoryProductTopTen struct {
 	DistrictID    int `param:"<in:query> <name:did> <desc:地区id 0为全球>"`
 	DistrictLevel int `param:"<in:query> <desc:地区等级> <name:dlevel>"`
@@ -324,7 +325,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		franks      []model.Frank
 	)
 	if s.CompanyName == "" && s.ProKey == "" {
-		return ctx.String(400, "prokey和公司名不能同时为空!!1")
+		return ctx.String(400, "prokey和公司名不能同时为空!!!")
 	}
 	if s.TimeOut != 0 {
 		SearchCtx, cancel = context.WithTimeout(context.Background(), s.TimeOut*time.Second)
@@ -935,6 +936,7 @@ func (param *CategoryCompanyTopTen) Serve(ctx *faygo.Context) error {
 		search    *elastic.SearchService
 		query     *elastic.BoolQuery
 		redisKey  string
+		aggFiled  string
 	)
 	if param.TimeOut != 0 {
 		SearchCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
@@ -951,6 +953,7 @@ func (param *CategoryCompanyTopTen) Serve(ctx *faygo.Context) error {
 	dataType(query, param.DateType)
 	categoryFilter(query, param.CategoryID)
 	if param.Ietype == 0 {
+		aggFiled = "PurchaserId"
 		if param.DistrictLevel == 0 {
 			agg.Field("PurchaserDistrictId1")
 		} else if param.DistrictLevel == 1 {
@@ -958,11 +961,12 @@ func (param *CategoryCompanyTopTen) Serve(ctx *faygo.Context) error {
 		} else if param.DistrictLevel == 2 {
 			agg.Field("PurchaserDistrictId3")
 		}
-		purchaser := elastic.NewTermsAggregation().Field("PurchaserId")
+		purchaser := elastic.NewTermsAggregation().Field(aggFiled)
 		purchaser.Size(1)
-		agg = agg.SubAggregation("purchaser", purchaser)
+		agg = agg.SubAggregation(aggFiled, purchaser)
 		agg.OrderByCountDesc()
 	} else {
+		aggFiled = "SupplierId"
 		if param.DistrictLevel == 0 {
 			agg.Field("SupplierDistrictId1")
 		} else if param.DistrictLevel == 1 {
@@ -970,9 +974,9 @@ func (param *CategoryCompanyTopTen) Serve(ctx *faygo.Context) error {
 		} else if param.DistrictLevel == 2 {
 			agg.Field("SupplierDistrictId3")
 		}
-		supplier := elastic.NewTermsAggregation().Field("SupplierId")
+		supplier := elastic.NewTermsAggregation().Field(aggFiled)
 		supplier.Size(1)
-		agg = agg.SubAggregation("supplier", supplier)
+		agg = agg.SubAggregation(aggFiled, supplier)
 		agg.OrderByCountDesc()
 	}
 	agg.Size(10)
@@ -990,7 +994,7 @@ func (param *CategoryCompanyTopTen) Serve(ctx *faygo.Context) error {
 			Did: int64(DistrictID),
 		}
 		category.Dname = service.GetDidNameByDid(int64(DistrictID))
-		termsChilren, _ := terms.Buckets[i].Aggregations.Terms("purchaser")
+		termsChilren, _ := terms.Buckets[i].Aggregations.Terms(aggFiled)
 		count := termsChilren.SumOfOtherDocCount
 		category.Value = float64(count)
 		districts = append(districts, category)
@@ -1013,10 +1017,12 @@ func (param *CategoryCompanyTopTen) Serve(ctx *faygo.Context) error {
 
 //右侧第二个图
 type CategoryVwTimeFilter struct {
-	VwType int `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0volume 1weight> "`
-	//Ietype   int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
-	DateType int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
-	TimeOut  time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	VwType        int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0volume 1weight> "`
+	Ietype        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
+	DateType      int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
+	DistrictID    int           `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:0采购商 1供应商> "`
+	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:0采购商 1供应商> "`
+	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 }
 
 func (param *CategoryVwTimeFilter) Serve(ctx *faygo.Context) error {
@@ -1046,8 +1052,10 @@ func (param *CategoryVwTimeFilter) Serve(ctx *faygo.Context) error {
 		agg.Field("OrderWeight")
 	}
 	dateAgg.SubAggregation("vwCount", agg)
+	//cid有待修改
 	for i := 0; i < len(constants.TopTenCategoryId); i++ {
 		query = elastic.NewBoolQuery()
+		district(query, param.DistrictID, param.DistrictLevel, param.Ietype)
 		search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 		dataType(query, param.DateType)
 		query.Filter(elastic.NewTermQuery("CategoryId", constants.TopTenCategoryId[i]))

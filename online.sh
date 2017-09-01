@@ -2,7 +2,7 @@
 
 echo 'pack'
 cd $GOPATH/src/github.com/zhangweilun/tradeweb
-GOOS=linux GOARCH=amd64 go build
+GOOS=linux GOARCH=amd64 go build -i
 # tar -czf tradeweb.tar.gz ./tradeweb
 # tar -xzvf file.tar.gz
 upx  ./tradeweb

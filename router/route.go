@@ -68,18 +68,24 @@ func Route(frame *faygo.Framework) {
 
 			frame.NewOPTIONS("/CategoryTopTenArea.html"),
 			frame.NewPOST("/CategoryTopTenArea.html", &handler.CategoryTopTenArea{}).Use(middleware.RedisCache).Use(middleware.Auth),
+			//frame.NewPOST("/CategoryTopTenArea.html", &handler.CategoryTopTenArea{}),
 
 			frame.NewOPTIONS("/CategoryProductTopTenArea.html"),
 			frame.NewPOST("/CategoryProductTopTenArea.html", &handler.CategoryProductTopTenArea{}).Use(middleware.RedisCache).Use(middleware.Auth),
+			//frame.NewPOST("/CategoryProductTopTenArea.html", &handler.CategoryProductTopTenArea{}),
 
 			frame.NewOPTIONS("/CategoryCompanyTopTen.html"),
-			frame.NewPOST("/CategoryCompanyTopTen.html", &handler.CategoryCompanyTopTen{}).Use(middleware.RedisCache),
+			frame.NewPOST("/CategoryCompanyTopTen.html", &handler.CategoryCompanyTopTen{}).Use(middleware.RedisCache).Use(middleware.Auth),
+			//frame.NewPOST("/CategoryCompanyTopTen.html", &handler.CategoryCompanyTopTen{}),
 
+			//右侧第二个图
 			frame.NewOPTIONS("/CategoryVwTimeFilter.html"),
-			frame.NewPOST("/CategoryVwTimeFilter.html", &handler.CategoryVwTimeFilter{}).Use(middleware.RedisCache),
+			//frame.NewPOST("/CategoryVwTimeFilter.html", &handler.CategoryVwTimeFilter{}).Use(middleware.RedisCache).Use(middleware.Auth),
+			frame.NewPOST("/CategoryVwTimeFilter.html", &handler.CategoryVwTimeFilter{}),
 
+			//右侧第一个图
 			frame.NewOPTIONS("/GlobalImport.html"),
-			frame.NewPOST("/GlobalImport.html", &handler.GlobalImport{}).Use(middleware.RedisCache),
+			frame.NewPOST("/GlobalImport.html", &handler.GlobalImport{}).Use(middleware.RedisCache).Use(middleware.Auth),
 		),
 
 		frame.NewPOST("/login.html", &handler.Login{}),
