@@ -72,3 +72,11 @@ func TestGetMapInfo(t *testing.T) {
 	maps := GetMapInfo(0, 2, 0, 0, 0, 0)
 	fmt.Println(maps)
 }
+
+func TestGetAllDistrictName(t *testing.T) {
+	name, err := GetAllDistrictName(0)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(name)
+}

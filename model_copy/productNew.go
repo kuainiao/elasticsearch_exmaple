@@ -17,3 +17,4 @@ type ProductNew struct {
 	UpdateTime         time.Time `xorm:"not null default 'CURRENT_TIMESTAMP' TIMESTAMP"`
 	IsDeleted          int       `xorm:"not null default 0 INT(11)"`
 }
+

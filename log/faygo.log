@@ -1,0 +1,57 @@
+[2017/09/03T09:47:42.962+08:00] APIdoc's URL path is '/apidoc/' [check direct ip for filter] <tradeweb>
+[2017/09/03T09:47:42.964+08:00] [SYS]     GET | /                              <tradeweb>
+[2017/09/03T09:47:42.964+08:00] [SYS]     GET | /apidoc/*filepath              <tradeweb>
+[2017/09/03T09:47:42.964+08:00] [SYS]     GET | /apidoc_swagger.json           <tradeweb>
+[2017/09/03T09:47:42.964+08:00] [SYS] OPTIONS | /frank/CompanyContacts.html    <tradeweb>
+[2017/09/03T09:47:42.964+08:00] [SYS]    POST | /frank/CompanyContacts.html    <tradeweb>
+[2017/09/03T09:47:42.964+08:00] [SYS] OPTIONS | /frank/CompanyDistrict.html    <tradeweb>
+[2017/09/03T09:47:42.964+08:00] [SYS]    POST | /frank/CompanyDistrict.html    <tradeweb>
+[2017/09/03T09:47:42.964+08:00] [SYS] OPTIONS | /frank/CompanyInfo.html        <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/CompanyInfo.html        <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/CompanyList.html        <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/CompanyList.html        <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/CompanyRelations.go     <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/CompanyRelations.go     <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/DetailList.go           <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/DetailList.go           <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]     GET | /frank/DetailOne.go            <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/DetailOne.go            <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/DetailTrend.go          <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/DetailTrend.go          <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/GroupHistory.go         <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/GroupHistory.go         <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/InfoDetail.go           <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/InfoDetail.go           <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/NewTenFrank.go          <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/NewTenFrank.go          <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/ProductList.go          <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/ProductList.go          <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/search.go               <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/search.go               <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /frank/topTen.go               <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /frank/topTen.go               <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /index/AggCount.go             <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]     GET | /index/AggCount.go             <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /index/CategoryCompanyTopTen.html <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]    POST | /index/CategoryCompanyTopTen.html <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS]     GET | /index/CategoryProductTopTen.go <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /index/CategoryProductTopTen.go <tradeweb>
+[2017/09/03T09:47:42.965+08:00] [SYS] OPTIONS | /index/CategoryProductTopTenArea.html <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]    POST | /index/CategoryProductTopTenArea.html <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]     GET | /index/CategoryTopTen.go       <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS] OPTIONS | /index/CategoryTopTen.go       <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]    POST | /index/CategoryTopTenArea.html <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS] OPTIONS | /index/CategoryTopTenArea.html <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]    POST | /index/CategoryVwTimeFilter.html <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS] OPTIONS | /index/CategoryVwTimeFilter.html <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS] OPTIONS | /index/FindMaoInfo.html        <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]    POST | /index/FindMaoInfo.html        <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]    POST | /index/GlobalImport.html       <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS] OPTIONS | /index/GlobalImport.html       <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]    POST | /login.html                    <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]     GET | /static/*filepath              <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]    POST | /test                          <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS]     GET | /upload/*filepath              <tradeweb>
+[2017/09/03T09:47:42.966+08:00] [SYS] listen and serve HTTP on 0.0.0.0:8888 <tradeweb>
+[2017/09/03T09:47:56.002+08:00] [I] {"Id":0,"Time":1504403276,"Ip":"[","Host":"localhost:8888","Url":"/","Referer":"","Method":"GET","UserAgent":"Mozilla_5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko_20100101 Firefox_55.0","Cs":""} <tradeweb #github.com/zhangweilun/tradeweb/middleware/flow_agg.go:74>
+[2017/09/03T09:47:56.002+08:00] [I]       127.0.0.1     GET  401         52    344.176µs /                              |  <tradeweb>

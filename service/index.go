@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/henrylee2cn/faygo/errors"
 	"github.com/henrylee2cn/faygo/ext/db/xorm"
 	"github.com/zhangweilun/tradeweb/model"
 	"github.com/zhangweilun/tradeweb/util"
@@ -79,4 +80,17 @@ func GetMapInfo(ietype, dateType, pid, dlevel, cid, did int) *[]model.MapInfo {
 		maps = append(maps, info)
 	}
 	return &maps
+}
+
+//0 得到所有国家 1得到所有省份 2得到所有市
+func GetAllDistrictName(districtLevel int) (*[]model.District, error) {
+	if districtLevel > 2 {
+		return nil, errors.New("districtLevel 必须 < 2")
+	}
+	var result []model.District
+	district := model.District{
+		Level: districtLevel + 1,
+	}
+	db.Cols("dname_en","did").Find(&result, district)
+	return &result, nil
 }

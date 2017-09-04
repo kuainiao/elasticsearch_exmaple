@@ -20,7 +20,7 @@ func Route(frame *faygo.Framework) {
 			frame.NewPOST("/topTen.go", &handler.TopTenProduct{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/CompanyRelations.go"),
-			frame.NewPOST("/CompanyRelations.go", &handler.CompanyRelations{}).Use(middleware.RedisCache).Use(middleware.Auth),
+			frame.NewPOST("/CompanyRelations.go", &handler.CompanyRelations{}),
 
 			frame.NewOPTIONS("/GroupHistory.go"),
 			frame.NewPOST("/GroupHistory.go", &handler.GroupHistory{}).Use(middleware.RedisCache).Use(middleware.Auth),
@@ -80,19 +80,21 @@ func Route(frame *faygo.Framework) {
 
 			//右侧第二个图
 			frame.NewOPTIONS("/CategoryVwTimeFilter.html"),
-			//frame.NewPOST("/CategoryVwTimeFilter.html", &handler.CategoryVwTimeFilter{}).Use(middleware.RedisCache).Use(middleware.Auth),
-			frame.NewPOST("/CategoryVwTimeFilter.html", &handler.CategoryVwTimeFilter{}),
+			frame.NewPOST("/CategoryVwTimeFilter.html", &handler.CategoryVwTimeFilter{}).Use(middleware.RedisCache).Use(middleware.Auth),
+			//frame.NewPOST("/CategoryVwTimeFilter.html", &handler.CategoryVwTimeFilter{}),
 
 			//右侧第一个图
 			frame.NewOPTIONS("/GlobalImport.html"),
 			frame.NewPOST("/GlobalImport.html", &handler.GlobalImport{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/DistributionRegion.html"),
+			frame.NewPOST("/DistributionRegion.html", &handler.DistributionRegion{}),
 		),
 
 		frame.NewPOST("/login.html", &handler.Login{}),
 		//倒的执行
 		frame.NewNamedAPI("Index", "GET", "/", handler.Index).Use(middleware.RedisCache).Use(middleware.Auth),
-		frame.NewNamedAPI("test struct handler", "POST", "/test", &handler.Test{}).
-			Use(middleware.Token),
+		frame.NewNamedAPI("test struct handler", "POST", "/test", &handler.Test{}),
 	).Use(middleware.CrossOrigin)
 
 }
