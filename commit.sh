@@ -9,4 +9,4 @@ git commit -a -m "$msg"
 
 git pull origin master
 
-git push origin master2
+git push origin master
