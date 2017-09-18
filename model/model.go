@@ -165,3 +165,18 @@ type MyCustomClaims struct {
 	// This will hold claims that are recommended having (Expiration, issuer)
 	jwt.StandardClaims
 }
+
+type MapClickInfo struct {
+	Maps      []MapInfo `json:"maps"`
+	Value     int64     `json:"value"`
+	Title     string    `json:"name"`
+	Latitude  string    `json:"latitude"`
+	Longitude string    `json:"longitude"`
+	Did       int64     `json:"did"`
+}
+
+type CompanyInfo struct {
+	ID    int64    `json:"id"`
+	Name  string `json:"name"`
+	Value float64 `json:"value"`
+}
