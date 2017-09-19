@@ -138,6 +138,14 @@ type Category struct {
 	StatisList   []DetailTrand `json:"statisList,omitempty"`
 }
 
+type CategoryForButtom struct {
+	CategoryName string        `json:"name,omitempty"`
+	CategoryId   int           `json:"cid,omitempty"`
+	Value        float64       `json:"value,omitempty"`
+	Dname        string        `json:"dnameEn,omitempty"`
+	Did          int64         `json:"did,omitempty"`
+}
+
 type DetailInfo struct {
 	ID     int           `json:"id"`
 	Name   string        `json:"name"`
@@ -164,4 +172,19 @@ type MyCustomClaims struct {
 
 	// This will hold claims that are recommended having (Expiration, issuer)
 	jwt.StandardClaims
+}
+
+type MapClickInfo struct {
+	Maps      []MapInfo `json:"maps"`
+	Value     int64     `json:"value"`
+	Title     string    `json:"name"`
+	Latitude  string    `json:"latitude"`
+	Longitude string    `json:"longitude"`
+	Did       int64     `json:"did"`
+}
+
+type CompanyInfo struct {
+	ID    int64    `json:"id"`
+	Name  string `json:"name"`
+	Value float64 `json:"value"`
 }

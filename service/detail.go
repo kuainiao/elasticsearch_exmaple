@@ -26,7 +26,7 @@ func GetDidNameByDid(districtId int64) string {
 //GetBuyer 通过id得到采购
 func GetBuyer(companyId int) *model.BusinessesNew {
 	businessesNew := model.BusinessesNew{Id: int64(companyId)}
-	db.Get(&businessesNew)
+	db.Omit("create_time","update_time","name").Get(&businessesNew)
 
 	if businessesNew.Url == "" || businessesNew.LinkPhone == "" {
 		company := model.DataCompany{BusinessesId: int(businessesNew.Id)}
@@ -46,7 +46,7 @@ func GetSupplier(companyId int) *model.SuppliersNew {
 	db.Get(&suppliersNew)
 	if suppliersNew.Url == "" || suppliersNew.LinkPhone == "" {
 		company := model.DataCompany{SuppliersId: int(suppliersNew.Id)}
-		db.Get(&company)
+		db.Omit("create_time","update_time","name").Get(&company)
 		suppliersNew.Url = company.CompanyWebsite
 		suppliersNew.LinkPhone = company.LinkPhone
 		//supplierConfition := model.SuppliersNew{Id: int64(companyId)}

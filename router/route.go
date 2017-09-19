@@ -88,7 +88,36 @@ func Route(frame *faygo.Framework) {
 			frame.NewPOST("/GlobalImport.html", &handler.GlobalImport{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/DistributionRegion.html"),
-			frame.NewPOST("/DistributionRegion.html", &handler.DistributionRegion{}),
+			frame.NewPOST("/DistributionRegion.html", &handler.DistributionRegion{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/DistrictCompanyList.html"),
+			frame.NewPOST("/DistrictCompanyList.html", &handler.DistrictCompanyList{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/FindMapRelation.html"),
+			frame.NewPOST("/FindMapRelation.html", &handler.FindMapRelation{}).Use(middleware.RedisCache).Use(middleware.Auth),
+		),
+
+		frame.NewGroup("/product",
+			frame.NewOPTIONS("/CountryRank.html"),
+			frame.NewPOST("/CountryRank.html", &handler.CountryRank{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/ProductCompanyTop.html"),
+			frame.NewPOST("/ProductCompanyTop.html", &handler.ProductCompanyTop{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/ProductCompanyTrend.html"),
+			frame.NewPOST("/ProductCompanyTrend.html", &handler.ProductCompanyTrend{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/ProductTrend.html"),
+			frame.NewPOST("/ProductTrend.html", &handler.ProductTrend{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/RegionTrend.html"),
+			frame.NewPOST("/RegionTrend.html", &handler.RegionTrend{}),
+
+			frame.NewOPTIONS("/RegionTop.html"),
+			frame.NewPOST("/RegionTop.html", &handler.RegionTop{}).Use(middleware.RedisCache).Use(middleware.Auth),
+
+			frame.NewOPTIONS("/ProductInWorld.html"),
+			frame.NewPOST("/ProductInWorld.html",&handler.ProductInWorld{}),
 		),
 
 		frame.NewPOST("/login.html", &handler.Login{}),

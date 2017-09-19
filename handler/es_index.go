@@ -18,6 +18,7 @@ import (
 	"github.com/zhangweilun/tradeweb/constants"
 	"github.com/zhangweilun/tradeweb/model"
 	"github.com/zhangweilun/tradeweb/util"
+
 	"gopkg.in/olivere/elastic.v5"
 )
 
@@ -30,6 +31,7 @@ type AggCount struct {
 	VwType        int `param:"<in:query> <name:vwtype> <desc:volume weight类型 0volume>"`
 	IeType        int `param:"<in:query> <name:ietype> <desc:import export 类型 0import>"`
 	DateType      int `param:"<in:query> <name:date_type> <desc:date_type 时间过滤>"`
+	Pid           int `param:"<in:query> <name:pid>   <err:pid不能为空！>  <desc:排序的参数 1 2 3>"`
 }
 
 //AggCount 全球采购商（进口总柜量）或供应商（出口总柜量）的总数
@@ -49,6 +51,12 @@ func (q *AggCount) Serve(ctx *faygo.Context) error {
 	query := elastic.NewBoolQuery()
 	dataType(query, q.DateType)
 	district(query, q.DistrictID, q.DistrictLevel, q.IeType)
+	if q.Pid != 0 {
+		productFilter(query, q.Pid)
+	}
+	if q.CategoryID != 0 {
+		categoryFilter(query, q.CategoryID)
+	}
 	cardinality := elastic.NewCardinalityAggregation()
 	if q.IeType == 0 {
 		cardinality.Field("PurchaserId")
@@ -97,51 +105,15 @@ type CategoryTopTen struct {
 
 //Serve 行业排名
 //getIndustryTop10 get
-func (c *CategoryTopTen) Serve(ctx *faygo.Context) error {
+func (param *CategoryTopTen) Serve(ctx *faygo.Context) error {
 	var (
-		AggCountCtx context.Context
-		cancel      context.CancelFunc
-		vwCount     *elastic.SumAggregation
-		search      *elastic.SearchService
-		categorys   []model.Category
-		redisKey    string
+		searchCtx context.Context
+		cancel    context.CancelFunc
+		redisKey  string
 	)
-	AggCountCtx, cancel = context.WithCancel(context.Background())
+	searchCtx, cancel = context.WithCancel(context.Background())
 	defer cancel()
-	client := constants.Instance()
-	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
-	query := elastic.NewBoolQuery()
-	dataType(query, c.DateType)
-	district(query, c.DistrictID, c.DistrictLevel, c.IeType)
-	agg := elastic.NewTermsAggregation().Field("CategoryName.keyword")
-	vwCount = elastic.NewSumAggregation()
-	vwType(vwCount, c.VwType)
-	agg = agg.SubAggregation("vwCount", vwCount).Size(10).OrderByAggregation("vwCount", false)
-	search = search.Query(query).Aggregation("search", agg).RequestCache(true)
-	res, err := search.Size(0).Do(AggCountCtx)
-	if err != nil {
-		ctx.Log().Error(err)
-	}
-	terms, _ := res.Aggregations.Terms("search")
-	for i := 0; i < len(terms.Buckets); i++ {
-		CategoryName := terms.Buckets[i].Key.(string)
-		category := model.Category{
-			CategoryName: CategoryName,
-			CategoryId:   constants.CategoryMap[CategoryName],
-		}
-		for k, v := range terms.Buckets[i].Aggregations {
-			data, _ := v.MarshalJSON()
-			if k == "vwCount" {
-				value := util.BytesString(data)
-				volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
-				if err != nil {
-					ctx.Log().Error(err)
-				}
-				category.Value = util.Round(volume, 2)
-			}
-		}
-		categorys = append(categorys, category)
-	}
+	categorys := GetIndustryTop10(param.DistrictID, param.DistrictLevel, param.VwType, param.IeType,param.DateType, searchCtx)
 	result, err := jsoniter.Marshal(model.Response{
 		Data: categorys,
 	})
@@ -667,15 +639,15 @@ func getSpecificCompany(client *elastic.Client, CompanyType, Sort int, CompanyNa
 
 //FindMaoInfo findMapInfo.php
 type FindMaoInfo struct {
-	DistrictID    int           `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:0采购商 1供应商> "`
-	CategoryID    int           `param:"<in:formData> <name:cid> <required:required> <err:cid不能为空！>  <desc:0采购商 1供应商> "`
-	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:0采购商 1供应商> "`
-	IeType        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
-	VwType        int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0采购商 1供应商> "`
-	CategoryLevel int           `param:"<in:formData> <name:clevel> <required:required>  <err:clevel不能为空！>  <desc:0采购商 1供应商> "`
-	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
-	Pid           int           `param:"<in:formData> <name:pid> <required:required>  <err:pid不能为空！>  <desc:排序的参数 1 2 3>"`
-	DateType      int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
+	DistrictID    int `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:0采购商 1供应商> "`
+	CategoryID    int `param:"<in:formData> <name:cid> <required:required> <err:cid不能为空！>  <desc:0采购商 1供应商> "`
+	DistrictLevel int `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:0采购商 1供应商> "`
+	IeType        int `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
+	VwType        int `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0采购商 1供应商> "`
+	//CategoryLevel int           `param:"<in:formData> <name:clevel> <required:required>  <err:clevel不能为空！>  <desc:0采购商 1供应商> "`
+	TimeOut  time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	Pid      int           `param:"<in:formData> <name:pid> <required:required>  <err:pid不能为空！>  <desc:排序的参数 1 2 3>"`
+	DateType int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
 }
 
 //Serve s
@@ -692,15 +664,16 @@ func (param *FindMaoInfo) Serve(ctx *faygo.Context) error {
 	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
 }
 
-//CategoryTopTenArea top10行业的国家分布 下面第一个表
+//CategoryTopTenArea 国家分布 首页和产品页的下面的第一个表
 type CategoryTopTenArea struct {
-	CategoryID    int           `param:"<in:formData> <name:cid> <required:required> <err:cid不能为空！>  <desc:0采购商 1供应商> "`
+	CategoryID    int           `param:"<in:formData> <name:cid> <err:cid不能为空！>  <desc:0采购商 1供应商> "`
 	VwType        int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0采购商 1供应商> "`
 	Ietype        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
 	DateType      int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
 	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 	DistrictID    int           `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:0采购商 1供应商> "`
 	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:0采购商 1供应商> "`
+	Pid           int           `param:"<in:formData> <name:pid> <err:pid不能为空！>  <desc:0采购商 1供应商> "`
 }
 
 func (param *CategoryTopTenArea) Serve(ctx *faygo.Context) error {
@@ -723,7 +696,12 @@ func (param *CategoryTopTenArea) Serve(ctx *faygo.Context) error {
 	query = elastic.NewBoolQuery()
 	agg = elastic.NewTermsAggregation()
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
-	categoryFilter(query, param.CategoryID)
+	if param.CategoryID != 0 {
+		categoryFilter(query, param.CategoryID)
+	}
+	if param.Pid != 0 {
+		productFilter(query, param.Pid)
+	}
 	dataType(query, param.DateType)
 	district(query, param.DistrictID, param.DistrictLevel, param.Ietype)
 	if param.Ietype == 0 {
@@ -1015,13 +993,14 @@ func (param *CategoryCompanyTopTen) Serve(ctx *faygo.Context) error {
 	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
 }
 
-//右侧第二个图
+//CategoryVwTimeFilter 首页右侧第二个图
 type CategoryVwTimeFilter struct {
 	VwType        int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0volume 1weight> "`
 	Ietype        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0 import 1 export 0代表查询采购商> "`
 	DateType      int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:date_type 时间过滤>"`
 	DistrictID    int           `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:地区id> "`
 	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:地区等级> "`
+	Pid           int           `param:"<in:formData> <name:pid>  <err:pid不能为空！>  <desc:产品id> "`
 	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 }
 
@@ -1052,20 +1031,20 @@ func (param *CategoryVwTimeFilter) Serve(ctx *faygo.Context) error {
 		agg.Field("OrderWeight")
 	}
 	dateAgg.SubAggregation("vwCount", agg)
-	//cid有待修改
-	for i := 0; i < len(constants.TopTenCategoryId); i++ {
+	categorys := *GetIndustryTop10(param.DistrictID, param.DistrictLevel, param.VwType, param.Ietype,param.DateType, searchCtx)
+	for i := 0; i < len(categorys); i++ {
 		query = elastic.NewBoolQuery()
 		district(query, param.DistrictID, param.DistrictLevel, param.Ietype)
 		search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 		dataType(query, param.DateType)
-		query.Filter(elastic.NewTermQuery("CategoryId", constants.TopTenCategoryId[i]))
+		query.Filter(elastic.NewTermQuery("CategoryId", categorys[i].CategoryId))
 		res, err := search.Query(query).Aggregation("indexTime", dateAgg).Do(searchCtx)
 		if err != nil {
 			ctx.Log().Error(err)
 		}
 		category := model.Category{
-			CategoryId:   constants.TopTenCategoryId[i],
-			CategoryName: constants.CategoryMapInt[constants.TopTenCategoryId[i]],
+			CategoryId:   categorys[i].CategoryId,
+			CategoryName: categorys[i].CategoryName,
 		}
 		aggregations := res.Aggregations
 		terms, _ := aggregations.DateHistogram("indexTime")
@@ -1187,7 +1166,7 @@ func (param *GlobalImport) Serve(ctx *faygo.Context) error {
 //DistributionRegion  下面第四个图
 type DistributionRegion struct {
 	DistrictID    int           `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:地区id> "`
-	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:地区等级> "`
+	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <range 0:2> <err:dlevel不能为空！>  <desc:地区等级> "`
 	VwType        int           `param:"<in:formData> <name:vwtype> <required:required> <err:vwType不能为空！>  <desc:0volume 1weight> "`
 	Ietype        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
 	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
@@ -1212,11 +1191,8 @@ func (param *DistributionRegion) Serve(ctx *faygo.Context) error {
 	defer cancel()
 	client := constants.Instance()
 	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
-	alldistrictName, err := service.GetAllDistrictName(param.DistrictLevel)
+	alldistrictName := service.GetAllDistrictName(param.DistrictLevel)
 	size := len(*alldistrictName)
-	if err != nil {
-		return ctx.String(400, err.Error())
-	}
 	query = elastic.NewBoolQuery()
 	dataType(query,param.DateType)
 	agg = elastic.NewTermsAggregation()
@@ -1248,11 +1224,11 @@ func (param *DistributionRegion) Serve(ctx *faygo.Context) error {
 	}
 	aggregations := res.Aggregations
 	terms, _ := aggregations.Terms("DistributionRegion")
-	var districts []model.Category
+	var districts []model.CategoryForButtom
 	//增加一个数组 容量等于前端请求的pageSize，循环purchaseId获取详细信息
 	for i := 0; i < len(terms.Buckets); i++ {
 		DistrictID := terms.Buckets[i].Key.(float64)
-		category := model.Category{
+		category := model.CategoryForButtom{
 			Did: int64(DistrictID),
 		}
 		for i := 0; i < size; i++ {
@@ -1289,6 +1265,212 @@ func (param *DistributionRegion) Serve(ctx *faygo.Context) error {
 	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
 }
 
+func (param *DistributionRegion) Doc() faygo.Doc {
+	return faygo.Doc{
+		// API接口说明
+		Note: "首页下面第四个图",
+		// 响应说明或示例
+		Return: "返回json数组，数组key为value，地区英文名，和did",
+	}
+}
+
+//CompanyList 首页单击地图地区弹窗
+//getBuyerListTest dialog.js
+type DistrictCompanyList struct {
+	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
+	PageNo        int           `param:"<in:formData> <name:page_no> <required:required>  <nonzero:nonzero> <range: 1:1000>  <err:page_no必须在1到1000之间>   <desc:分页页码>"`
+	PageSize      int           `param:"<in:formData> <name:page_size> <required:required>  <nonzero:nonzero> <err:page_size不能为空！>  <desc:分页的页数>"`
+	DistrictID    int           `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:地区id> "`
+	Ietype        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
+	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:地区等级> "`
+	Sort          int           `param:"<in:formData> <name:sort> <required:required>  <err:sort不能为空！>  <desc:排序的参数 1 2 3>"`
+}
+
+func (param *DistrictCompanyList) Serve(ctx *faygo.Context) error {
+	var (
+		searchCtx   context.Context
+		cancel      context.CancelFunc
+		search      *elastic.SearchService
+		query       *elastic.BoolQuery
+		agg         *elastic.TermsAggregation
+		redisKey    string
+		cardinality *elastic.CardinalityAggregation
+		total       float64
+		franks      []model.Frank
+	)
+	if param.TimeOut != 0 {
+		searchCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
+	} else {
+		searchCtx, cancel = context.WithCancel(context.Background())
+	}
+	defer cancel()
+	client := constants.Instance()
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
+	query = elastic.NewBoolQuery()
+	district(query, param.DistrictID, param.DistrictLevel, param.Ietype)
+	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
+	agg = elastic.NewTermsAggregation()
+	if param.Sort == 2 {
+		agg = agg.OrderByAggregation("volume", false)
+
+	} else if param.Sort == -2 {
+		agg = agg.OrderByAggregation("volume", true)
+
+	} else if param.Sort == 3 {
+		agg = agg.OrderByAggregation("weight", false)
+
+	} else if param.Sort == -3 {
+		agg = agg.OrderByAggregation("weight", true)
+
+	} else if param.Sort == 1 {
+		agg = agg.OrderByCount(false)
+
+	} else if param.Sort == -1 {
+		agg = agg.OrderByCount(true)
+
+	} else {
+		agg = agg.OrderByCount(false)
+	}
+	agg.Size(param.PageSize * param.PageNo)
+	weightAgg := elastic.NewSumAggregation().Field("OrderWeight")
+	volumeAgg := elastic.NewSumAggregation().Field("OrderVolume")
+	agg = agg.SubAggregation("weight", weightAgg)
+	agg = agg.SubAggregation("volume", volumeAgg)
+	if param.Ietype == 0 {
+		cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
+		agg.Field("PurchaserId")
+	} else {
+		cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
+		agg.Field("SupplierId")
+	}
+	count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(searchCtx)
+	resCardinality, _ := count.Aggregations.Cardinality("count")
+	total = total + *resCardinality.Value
+	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
+	search = search.Query(query)
+	search = search.Aggregation("search", agg).RequestCache(true)
+	res, _ := search.Size(0).Do(searchCtx)
+	aggregations := res.Aggregations
+	terms, _ := aggregations.Terms("search")
+	//增加一个数组 容量等于前端请求的pageSize，循环purchaseId获取详细信息
+	for i := (param.PageNo - 1) * param.PageSize; i < len(terms.Buckets); i++ {
+		companyId := terms.Buckets[i].Key.(float64)
+		tradeNumber := terms.Buckets[i].DocCount
+		frank := model.Frank{
+			CompanyId:   int64(companyId),
+			TradeNumber: tradeNumber,
+		}
+		for k, v := range terms.Buckets[i].Aggregations {
+			data, _ := v.MarshalJSON()
+			if k == "volume" {
+				value := util.BytesString(data)
+				volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
+				if err != nil {
+					log.Println(err)
+				}
+				frank.OrderVolume = util.Round(volume, 2)
+			}
+			if k == "weight" {
+				value := util.BytesString(data)
+				weight, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
+				if err != nil {
+					log.Println(err)
+				}
+				frank.OrderWeight = util.Round(weight, 2)
+			}
+		}
+		franks = append(franks, frank)
+	}
+	for i := 0; i < len(franks); i++ {
+		search := client.Search().Index(constants.IndexName).Type(constants.TypeName)
+		query := elastic.NewBoolQuery()
+		query.QueryName("frankDetail")
+		if param.Ietype == 0 {
+			query = query.Must(elastic.NewTermQuery("PurchaserId", franks[i].CompanyId))
+		} else {
+			query = query.Must(elastic.NewTermQuery("SupplierId", franks[i].CompanyId))
+		}
+		search.Query(query).Sort("FrankTime", false).From(0).Size(1)
+		search.RequestCache(true)
+		res, _ := search.Do(searchCtx)
+		var frank model.Frank
+		detail := res.Hits.Hits[0].Source
+		jsonObject, _ := detail.MarshalJSON()
+		json.Unmarshal(jsonObject, &frank)
+		if param.Ietype == 0 {
+			franks[i].CompanyName = frank.Purchaser
+			franks[i].CompanyId = frank.PurchaserId
+		} else {
+			franks[i].CompanyName = frank.Supplier
+			franks[i].CompanyId = frank.SupplierId
+		}
+		franks[i].FrankTime = frank.FrankTime
+		franks[i].QiyunPort = frank.QiyunPort
+		franks[i].OrderId = frank.OrderId
+		franks[i].ProDesc = frank.ProDesc
+		franks[i].OriginalCountry = frank.OriginalCountry
+		franks[i].MudiPort = frank.MudiPort
+		franks[i].OrderNo = frank.OrderNo
+		franks[i].ProKey = frank.ProKey
+	}
+	result, err := jsoniter.Marshal(model.Response{
+		List:  franks,
+		Total: int64(total),
+	})
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+	if ctx.HasData("redisKey") {
+		redisKey = ctx.Data("redisKey").(string)
+		err := redis.Set(redisKey, util.BytesString(result), 1*time.Hour).Err()
+		if err != nil {
+			ctx.Log().Error(err)
+		}
+	}
+	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
+}
+
+func (param *DistrictCompanyList) Doc() faygo.Doc {
+	return faygo.Doc{
+		// API接口说明
+		Note: "单击地区弹出框",
+		// 响应说明或示例
+		Return: "返回json",
+	}
+}
+
+type FindMapRelation struct {
+	DateType      int `param:"<in:formData> <name:date_type> <desc:date_type 时间过滤>"`
+	DistrictID    int `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:地区id> "`
+	Ietype        int `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
+	DistrictLevel int `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:地区等级> "`
+}
+
+func (param *FindMapRelation) Serve(ctx *faygo.Context) error {
+	mapRelation := *service.GetMapRelation(param.Ietype, param.DateType, param.DistrictID)
+	info := service.GetMapClickInfo(int64(param.DistrictID))
+	value := 0
+	for i := 0; i < len(mapRelation); i++ {
+		value = value + mapRelation[i].Value
+	}
+	clickInfo := model.MapClickInfo{
+		Did:       info.Did,
+		Title:     info.DnameEn,
+		Longitude: info.Longitude,
+		Latitude:  info.Latitude,
+		Value:     int64(value),
+		Maps:      mapRelation,
+	}
+	result, err := jsoniter.Marshal(model.Response{
+		Data: clickInfo,
+	})
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+
+	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
+
+}
 type ProductInWorld struct {
 	DistrictID    int           `param:"<in:formData> <name:did> <required:required> <err:did不能为空！>  <desc:地区id> "`
 	DistrictLevel int           `param:"<in:formData> <name:dlevel> <required:required> <err:dlevel不能为空！>  <desc:地区等级> "`
@@ -1296,6 +1478,7 @@ type ProductInWorld struct {
 	Ietype        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
 	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 	DateType       int          `param:"<in:formData> <name:date_type> <required:required> <desc:时间过滤> "`
+	ProductId  int          `param:"<in:formData> <name:pid> <required:required> <nonzero:nonzero> <desc:产品id> "`
 }
 
 func (param *ProductInWorld) Serve(ctx *faygo.Context) error {
@@ -1304,7 +1487,7 @@ func (param *ProductInWorld) Serve(ctx *faygo.Context) error {
 		cancel    context.CancelFunc
 		search    *elastic.SearchService
 		query     *elastic.BoolQuery
-		vwCount       *elastic.SumAggregation
+		vwCount   *elastic.SumAggregation
 		//redisKey  string
 	)
 	if param.TimeOut != 0 {
@@ -1316,46 +1499,41 @@ func (param *ProductInWorld) Serve(ctx *faygo.Context) error {
 	client := constants.Instance()
 	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query = elastic.NewBoolQuery()
-	district(query,param.DistrictID,param.DistrictLevel,param.Ietype)
-	dataType(query,param.DateType)
+	vwCount = elastic.NewSumAggregation()
+	district(query, param.DistrictID, param.DistrictLevel, param.Ietype)
+	dataType(query, param.DateType)
+	productFilter(query,param.ProductId)
 	if param.VwType == 0 {
 		vwCount.Field("OrderVolume")
-	}else {
+	} else {
 		vwCount.Field("OrderWeight")
 	}
-	res, err := search.Query(query).Aggregation("vwCount", vwCount).RequestCache(true).Size(0).Do(searchCtx)
-	if err != nil {
-		ctx.Log().Error(err)
+	res, _ := search.Query(query).Aggregation("vwCount", vwCount).RequestCache(true).Size(0).Do(searchCtx)
+	terms, _ := res.Aggregations.Sum("vwCount")
+	//得到该地区的总数和名称
+	ww := terms.Value
+	nameByDid := service.GetDidNameByDid(int64(param.DistrictID))
+	ctx.Log().Print(ww)
+	ctx.Log().Print(nameByDid)
+	//不需要地区过滤条件再次请求
+	query = elastic.NewBoolQuery()
+	vwCount = elastic.NewSumAggregation()
+	if param.Ietype == 0 {
+		query = query.MustNot(elastic.NewTermQuery("PurchaserDistrictId1", 0))
+	}else{
+		query = query.MustNot(elastic.NewTermQuery("SupplierDistrictId1", 0))
 	}
-	aggregations := res.Aggregations
-	ctx.Log().Print(aggregations)
-	//terms, _ := aggregations.Sum("vwCount")
-	//var districts []model.Category
-	//增加一个数组 容量等于前端请求的pageSize，循环purchaseId获取详细信息
-	//for i := 0; i < len(terms.Buckets); i++ {
-	//	DistrictID := terms.Buckets[i].Key.(float64)
-	//	category := model.Category{
-	//		Did: int64(DistrictID),
-	//	}
-	//	for i := 0; i < size; i++ {
-	//		district := *alldistrictName
-	//		if district[i].Did == category.Did {
-	//			category.Dname = district[i].DnameEn
-	//		}
-	//	}
-	//	//category.Dname = service.GetDidNameByDid(int64(DistrictID))
-	//	for k, v := range terms.Buckets[i].Aggregations {
-	//		data, _ := v.MarshalJSON()
-	//		if k == "vwCount" {
-	//			value := util.BytesString(data)
-	//			volume, err := strconv.ParseFloat(value[strings.Index(value, ":")+1:len(value)-1], 10)
-	//			if err != nil {
-	//				log.Println(err)
-	//			}
-	//			category.Value = util.Round(volume, 2)
-	//		}
-	//	}
-	//	districts = append(districts, category)
-	//}
+	dataType(query, param.DateType)
+	productFilter(query,param.ProductId)
+	if param.VwType == 0 {
+		vwCount.Field("OrderVolume")
+	} else {
+		vwCount.Field("OrderWeight")
+	}
+	allRes, _ := search.Query(query).Aggregation("vwCount", vwCount).RequestCache(true).Size(0).Do(searchCtx)
+	allTerms, _ := allRes.Aggregations.Sum("vwCount")
+	total := allTerms.Value
+	ctx.Log().Print(total)
 	return nil
 }
+

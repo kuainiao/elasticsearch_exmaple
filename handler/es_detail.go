@@ -648,7 +648,7 @@ func (param *GroupHistory) Serve(ctx *faygo.Context) error {
 		} else {
 			queryDeatil = queryDeatil.Must(elastic.NewTermQuery("PurchaserId", franks[i].CompanyId))
 		}
-		if proKey != "" {
+		if proKey != "" && proKey != "All Product" {
 			queryDeatil = queryDeatil.Must(elastic.NewMatchQuery("ProDesc", proKey))
 		}
 		//search.Query(query).Sort("FrankTime", false).From(0).Size(1)
@@ -787,7 +787,7 @@ func (param *CompanyList) Serve(ctx *faygo.Context) error {
 
 //CompanyDistrict 采购商或者供应商地图分布
 type CompanyDistrict struct {
-	CompanyIDArray string        `param:"<in:formData> <name:company_ids> <required:required> <nonzero:nonzero>  <err:company_ids不能为空或空字符串> <desc:采购商或者供应商公司id数组>"`
+	CompanyIDArray string        `param:"<in:formData> <name:company_ids> <required:required>  <err:company_ids不能为空或空字符串> <desc:采购商或者供应商公司id数组>"`
 	CompanyType    int           `param:"<in:formData> <name:company_type> <required:required>  <range: 0:2>  <err:company_type必须在0到2之间>  <desc:公司类型>"`
 	TimeOut        time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 }
