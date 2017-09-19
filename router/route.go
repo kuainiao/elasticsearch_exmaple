@@ -111,13 +111,13 @@ func Route(frame *faygo.Framework) {
 			frame.NewPOST("/ProductTrend.html", &handler.ProductTrend{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/RegionTrend.html"),
-			frame.NewPOST("/RegionTrend.html", &handler.RegionTrend{}),
+			frame.NewPOST("/RegionTrend.html", &handler.RegionTrend{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/RegionTop.html"),
 			frame.NewPOST("/RegionTop.html", &handler.RegionTop{}).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/ProductInWorld.html"),
-			frame.NewPOST("/ProductInWorld.html",&handler.ProductInWorld{}),
+			frame.NewPOST("/ProductInWorld.html",&handler.ProductInWorld{}).Use(middleware.RedisCache).Use(middleware.Auth),
 		),
 
 		frame.NewPOST("/login.html", &handler.Login{}),
