@@ -20,6 +20,7 @@ import (
 	"github.com/zhangweilun/tradeweb/util"
 
 	"gopkg.in/olivere/elastic.v5"
+	"sync"
 )
 
 var redis = constants.Redis()
@@ -1511,9 +1512,9 @@ func (param *ProductInWorld) Serve(ctx *faygo.Context) error {
 	res, _ := search.Query(query).Aggregation("vwCount", vwCount).RequestCache(true).Size(0).Do(searchCtx)
 	terms, _ := res.Aggregations.Sum("vwCount")
 	//得到该地区的总数和名称
-	ww := terms.Value
+	countryTotal := terms.Value
 	nameByDid := service.GetDidNameByDid(int64(param.DistrictID))
-	ctx.Log().Print(ww)
+	ctx.Log().Print(countryTotal)
 	ctx.Log().Print(nameByDid)
 	//不需要地区过滤条件再次请求
 	query = elastic.NewBoolQuery()
@@ -1534,6 +1535,23 @@ func (param *ProductInWorld) Serve(ctx *faygo.Context) error {
 	allTerms, _ := allRes.Aggregations.Sum("vwCount")
 	total := allTerms.Value
 	ctx.Log().Print(total)
-	return nil
+	var countryValue sync.Map
+	countryValue.Store("value",countryTotal)
+	countryValue.Store("dnameEn",nameByDid)
+	result, err := jsoniter.Marshal(model.Response{
+		Data: countryValue,
+	})
+	if err != nil {
+		ctx.Log().Error(err)
+	}
+	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
 }
 
+func (param *ProductInWorld) Doc() faygo.Doc {
+	return faygo.Doc{
+		// API接口说明
+		Note: "产品地区页面下面第二个图",
+		// 响应说明或示例
+		Return: "返回json",
+	}
+}

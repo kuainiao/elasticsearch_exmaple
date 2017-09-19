@@ -56,7 +56,7 @@
 # mpeltonen/sbt-idea plugin
 .idea_modules/
 
-./debug
+/tradeweb
 
 # JIRA plugin
 atlassian-ide-plugin.xml
@@ -67,3 +67,6 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
+.idea/inspectionProfiles/
+src/
+upload/
