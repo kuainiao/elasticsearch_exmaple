@@ -20,7 +20,7 @@ import (
 	"github.com/zhangweilun/tradeweb/util"
 
 	"gopkg.in/olivere/elastic.v5"
-	"sync"
+
 )
 
 var redis = constants.Redis()
@@ -1172,7 +1172,7 @@ type DistributionRegion struct {
 	Ietype        int           `param:"<in:formData> <name:ietype> <required:required> <err:ietype不能为空！>  <desc:0采购商 1供应商> "`
 	TimeOut       time.Duration `param:"<in:formData>  <name:time_out> <desc:该接口的最大响应时间> "`
 	DateType      int           `param:"<in:formData> <name:date_type> <required:required>  <err:date_type不能为空！>  <desc:排序的参数 1 2 3>"`
-
+	Pid int `param:"<in:formData> <name:pid> <desc:产品id> "`
 }
 
 func (param *DistributionRegion) Serve(ctx *faygo.Context) error {
@@ -1196,6 +1196,9 @@ func (param *DistributionRegion) Serve(ctx *faygo.Context) error {
 	size := len(*alldistrictName)
 	query = elastic.NewBoolQuery()
 	dataType(query,param.DateType)
+	if param.Pid != 0 {
+		productFilter(query,param.Pid)
+	}
 	agg = elastic.NewTermsAggregation()
 	if param.Ietype == 0 {
 		if param.DistrictLevel == 0 {
@@ -1514,8 +1517,6 @@ func (param *ProductInWorld) Serve(ctx *faygo.Context) error {
 	//得到该地区的总数和名称
 	countryTotal := terms.Value
 	nameByDid := service.GetDidNameByDid(int64(param.DistrictID))
-	ctx.Log().Print(countryTotal)
-	ctx.Log().Print(nameByDid)
 	//不需要地区过滤条件再次请求
 	query = elastic.NewBoolQuery()
 	vwCount = elastic.NewSumAggregation()
@@ -1534,12 +1535,12 @@ func (param *ProductInWorld) Serve(ctx *faygo.Context) error {
 	allRes, _ := search.Query(query).Aggregation("vwCount", vwCount).RequestCache(true).Size(0).Do(searchCtx)
 	allTerms, _ := allRes.Aggregations.Sum("vwCount")
 	total := allTerms.Value
-	ctx.Log().Print(total)
-	var countryValue sync.Map
-	countryValue.Store("value",countryTotal)
-	countryValue.Store("dnameEn",nameByDid)
+	countryValue := make(map[string]interface{})
+	countryValue["value"] = countryTotal
+	countryValue["dnameEn"] = nameByDid
 	result, err := jsoniter.Marshal(model.Response{
 		Data: countryValue,
+		Total:int64(*total),
 	})
 	if err != nil {
 		ctx.Log().Error(err)

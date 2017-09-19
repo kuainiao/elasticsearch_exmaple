@@ -139,10 +139,10 @@ type Category struct {
 }
 
 type CategoryForButtom struct {
-	CategoryName string        `json:"name,omitempty"`
+	CategoryName string        `json:"cnameEn,omitempty"`
 	CategoryId   int           `json:"cid,omitempty"`
 	Value        float64       `json:"value,omitempty"`
-	Dname        string        `json:"dnameEn,omitempty"`
+	Dname        string        `json:"name,omitempty"`
 	Did          int64         `json:"did,omitempty"`
 }
 
