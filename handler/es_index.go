@@ -285,7 +285,7 @@ type Search struct {
 	Sort        int           `param:"<in:formData> <name:sort> <required:required>  <err:sort不能为空！>  <desc:排序的参数 1 2 3>"`
 }
 
-func (s *Search) Serve(ctx *faygo.Context) error {
+func (param *Search) Serve(ctx *faygo.Context) error {
 	var (
 		SearchCtx   context.Context
 		cancel      context.CancelFunc
@@ -297,11 +297,11 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		total       float64
 		franks      []model.Frank
 	)
-	if s.CompanyName == "" && s.ProKey == "" {
+	if param.CompanyName == "" && param.ProKey == "" {
 		return ctx.String(400, "prokey和公司名不能同时为空!!!")
 	}
-	if s.TimeOut != 0 {
-		SearchCtx, cancel = context.WithTimeout(context.Background(), s.TimeOut*time.Second)
+	if param.TimeOut != 0 {
+		SearchCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
 	} else {
 		SearchCtx, cancel = context.WithCancel(context.Background())
 	}
@@ -309,16 +309,17 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 	client := constants.Instance()
 	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query = elastic.NewBoolQuery()
-
-	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
-	proKey, _ := url.PathUnescape(s.ProKey)
+	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"),
+		elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
+	proKey, _ := url.PathUnescape(param.ProKey)
 	if proKey != "" {
 		proKey = util.TrimFrontBack(proKey)
 	}
+	lowerCompany := strings.ToLower(param.CompanyName)
 	//判断是否全称存在
-	if s.CompanyName != "" {
-		if s.PageNo == 1 {
-			company, err := getSpecificCompany(client, s.CompanyType, s.Sort, s.CompanyName, proKey, SearchCtx)
+	if param.CompanyName != "" {
+		if param.PageNo == 1 {
+			company, err := getSpecificCompany(client, param.CompanyType, param.Sort, param.CompanyName, proKey, SearchCtx)
 			if err != nil {
 				ctx.Log().Error(err.Error())
 			} else {
@@ -329,47 +330,55 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 	}
 	query = elastic.NewBoolQuery()
 	agg = elastic.NewTermsAggregation()
-	if s.Sort == 2 {
+	if param.Sort == 2 {
 		agg = agg.OrderByAggregation("volume", false)
 
-	} else if s.Sort == -2 {
+	} else if param.Sort == -2 {
 		agg = agg.OrderByAggregation("volume", true)
 
-	} else if s.Sort == 3 {
+	} else if param.Sort == 3 {
 		agg = agg.OrderByAggregation("weight", false)
 
-	} else if s.Sort == -3 {
+	} else if param.Sort == -3 {
 		agg = agg.OrderByAggregation("weight", true)
 
-	} else if s.Sort == 1 {
+	} else if param.Sort == 1 {
 		agg = agg.OrderByCount(false)
 
-	} else if s.Sort == -1 {
+	} else if param.Sort == -1 {
 		agg = agg.OrderByCount(true)
 
 	} else {
 		agg = agg.OrderByCount(false)
 	}
-	agg.Size(s.PageSize * s.PageNo)
+	agg.Size(param.PageSize * param.PageNo)
 	weightAgg := elastic.NewSumAggregation().Field("OrderWeight")
 	volumeAgg := elastic.NewSumAggregation().Field("OrderVolume")
 	agg = agg.SubAggregation("weight", weightAgg)
 	agg = agg.SubAggregation("volume", volumeAgg)
+	//需要过滤下停用词,将公司名过滤停用词
+	for i := 0; i < len(constants.Stopwords); i++ {
+		if strings.Contains(lowerCompany, constants.Stopwords[i]) {
+			lowerCompany = util.FilterStopWords(lowerCompany,constants.Stopwords[i])
+		}
+	}
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	if proKey != "" {
 		query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	}
-	if s.CompanyType == 0 {
+	if param.CompanyType == 0 {
 		cardinality = elastic.NewCardinalityAggregation().Field("PurchaserId")
 		agg.Field("PurchaserId")
-		if s.CompanyName != "" {
-			query = query.Must(elastic.NewMatchQuery("Purchaser", strings.ToLower(s.CompanyName)))
+
+		if param.CompanyName != "" {
+			query = query.Must(elastic.NewMatchQuery("Purchaser", lowerCompany))
 		}
 	} else {
 		cardinality = elastic.NewCardinalityAggregation().Field("SupplierId")
 		agg.Field("SupplierId")
-		if s.CompanyName != "" {
-			query = query.Must(elastic.NewMatchQuery("Supplier", strings.ToLower(s.CompanyName)))
+		//还需要过滤下停用词
+		if param.CompanyName != "" {
+			query = query.Must(elastic.NewMatchQuery("Supplier", lowerCompany))
 		}
 	}
 	count, _ := search.Query(query).Aggregation("count", cardinality).Size(0).Do(SearchCtx)
@@ -377,9 +386,9 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 	total = total + *resCardinality.Value
 	if len(franks) > 0 {
 		//已经有完整匹配
-		agg.Size(s.PageSize*s.PageNo - 1)
+		agg.Size(param.PageSize*param.PageNo - 1)
 	} else {
-		agg.Size(s.PageSize * s.PageNo)
+		agg.Size(param.PageSize * param.PageNo)
 	}
 	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	search = search.Query(query)
@@ -388,7 +397,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 	aggregations := res.Aggregations
 	terms, _ := aggregations.Terms("search")
 	//增加一个数组 容量等于前端请求的pageSize，循环purchaseId获取详细信息
-	for i := (s.PageNo - 1) * s.PageSize; i < len(terms.Buckets); i++ {
+	for i := (param.PageNo - 1) * param.PageSize; i < len(terms.Buckets); i++ {
 		companyId := terms.Buckets[i].Key.(float64)
 		tradeNumber := terms.Buckets[i].DocCount
 		frank := model.Frank{
@@ -421,22 +430,22 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		query := elastic.NewBoolQuery()
 		query.QueryName("frankDetail")
 		highlight := elastic.NewHighlight()
-		if s.CompanyType == 0 {
+		if param.CompanyType == 0 {
 			query = query.Must(elastic.NewTermQuery("PurchaserId", franks[i].CompanyId))
-			if s.CompanyName != "" {
-				query = query.Must(elastic.NewMatchQuery("Purchaser", strings.ToLower(s.CompanyName)))
+			if lowerCompany != "" {
+				query = query.Must(elastic.NewMatchQuery("Purchaser", lowerCompany))
 				highlight.Field("Purchaser")
 			}
 		} else {
 			query = query.Must(elastic.NewTermQuery("SupplierId", franks[i].CompanyId))
-			if s.CompanyName != "" {
-				query = query.Must(elastic.NewMatchQuery("Supplier", strings.ToLower(s.CompanyName)))
+			if lowerCompany != "" {
+				query = query.Must(elastic.NewMatchQuery("Supplier", lowerCompany))
 				highlight.Field("Supplier")
 			}
 		}
 		highlight = highlight.PreTags(`<font color="#FF0000">`).PostTags("</font>")
-		proKey, _ := url.PathUnescape(s.ProKey)
-		if s.ProKey != "" {
+		proKey, _ := url.PathUnescape(param.ProKey)
+		if param.ProKey != "" {
 			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 			highlight.Field("ProDesc")
 		}
@@ -447,7 +456,7 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		detail := res.Hits.Hits[0].Source
 		jsonObject, _ := detail.MarshalJSON()
 		json.Unmarshal(jsonObject, &frank)
-		if s.CompanyType == 0 {
+		if param.CompanyType == 0 {
 			franks[i].CompanyName = frank.Purchaser
 			franks[i].CompanyId = frank.PurchaserId
 		} else {
@@ -464,14 +473,21 @@ func (s *Search) Serve(ctx *faygo.Context) error {
 		franks[i].ProKey = frank.ProKey
 		//设置高亮
 		hight := res.Hits.Hits[0].Highlight
-		if s.ProKey != "" {
-			franks[i].ProDesc = hight["ProDesc"][0]
+		if param.ProKey != "" {
+			if company, ok := hight["ProDesc"]; ok {
+				franks[i].ProDesc = company[0]
+			}
 		}
-		if s.CompanyName != "" {
-			if s.CompanyType == 0 {
-				franks[i].CompanyName = hight["Purchaser"][0]
+		if lowerCompany != "" {
+			if param.CompanyType == 0 {
+				if company, ok := hight["Purchaser"]; ok {
+					franks[i].CompanyName = company[0]
+				}
+
 			} else {
-				franks[i].CompanyName = hight["Supplier"][0]
+				if company, ok := hight["Supplier"]; ok {
+					franks[i].CompanyName = company[0]
+				}
 			}
 		}
 	}
@@ -574,12 +590,18 @@ func getSpecificCompany(client *elastic.Client, CompanyType, Sort int, CompanyNa
 	query = elastic.NewBoolQuery()
 	query.QueryName("frankDetail")
 	highlight := elastic.NewHighlight()
+	lowerCompany := strings.ToLower(CompanyName)
 	if CompanyType == 0 {
 		query = query.Must(elastic.NewTermQuery("PurchaserId", frank.CompanyId))
 		if CompanyName != "" {
 			for i := 0; i < len(constants.Stopwords); i++ {
-				if strings.Contains(strings.ToLower(CompanyName), constants.Stopwords[i]) {
-					query = query.Must(elastic.NewMatchQuery("Purchaser", CompanyName))
+				if lowerCompany  == constants.Stopwords[i]{
+					continue
+				}else if strings.Contains(lowerCompany, constants.Stopwords[i]) {
+					lastIndex := strings.LastIndex(lowerCompany, constants.Stopwords[i])
+					index := strings.Index(lowerCompany, constants.Stopwords[i])
+					queryCompany := lowerCompany[0:index] + lowerCompany[lastIndex:]
+					query = query.Must(elastic.NewMatchQuery("Purchaser", queryCompany))
 					highlight.Field("Purchaser")
 				}
 			}
@@ -589,8 +611,15 @@ func getSpecificCompany(client *elastic.Client, CompanyType, Sort int, CompanyNa
 		query = query.Must(elastic.NewTermQuery("SupplierId", frank.CompanyId))
 		if CompanyName != "" {
 			for i := 0; i < len(constants.Stopwords); i++ {
-				query = query.Must(elastic.NewMatchQuery("Supplier", CompanyName))
-				highlight.Field("Supplier")
+				if lowerCompany == constants.Stopwords[i] {
+					continue
+				}else if strings.Contains(lowerCompany, constants.Stopwords[i]) {
+					lastIndex := strings.LastIndex(lowerCompany, constants.Stopwords[i])
+					index := strings.Index(lowerCompany, constants.Stopwords[i])
+					queryCompany := lowerCompany[0:index] + lowerCompany[lastIndex:]
+					query = query.Must(elastic.NewMatchQuery("Supplier", queryCompany))
+					highlight.Field("Supplier")
+				}
 			}
 		}
 	}
@@ -625,13 +654,21 @@ func getSpecificCompany(client *elastic.Client, CompanyType, Sort int, CompanyNa
 	//设置高亮
 	hight := res.Hits.Hits[0].Highlight
 	if proKey != "" {
-		frank.ProDesc = hight["ProDesc"][0]
+		if pro, ok := hight["ProDesc"]; ok {
+			frank.ProDesc = pro[0]
+		}
+
 	}
 	if CompanyName != "" {
 		if CompanyType == 0 {
-			frank.CompanyName = hight["Purchaser"][0]
+			if company, ok := hight["Purchaser"]; ok {
+				frank.CompanyName = company[0]
+			}
+
 		} else {
-			frank.CompanyName = hight["Supplier"][0]
+			if company, ok := hight["Supplier"]; ok {
+				frank.CompanyName = company[0]
+			}
 		}
 	}
 

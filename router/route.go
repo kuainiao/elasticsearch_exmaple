@@ -14,7 +14,7 @@ func Route(frame *faygo.Framework) {
 			frame.NewPOST("/DetailList.go", &handler.FrankDetail).Use(middleware.RedisCache).Use(middleware.Auth),
 
 			frame.NewOPTIONS("/search.go"),
-			frame.NewPOST("/search.go", &handler.Search{}).Use(middleware.RedisCache).Use(middleware.Auth),
+			frame.NewPOST("/search.go", &handler.Search{}),
 
 			frame.NewOPTIONS("/topTen.go"),
 			frame.NewPOST("/topTen.go", &handler.TopTenProduct{}).Use(middleware.RedisCache).Use(middleware.Auth),

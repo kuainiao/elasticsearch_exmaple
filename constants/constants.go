@@ -5,9 +5,7 @@ import (
 	"log"
 	"os"
 	"sync"
-
 	"github.com/henrylee2cn/faygo"
-
 	"github.com/go-redis/redis"
 	elastic "gopkg.in/olivere/elastic.v5"
 )
@@ -37,6 +35,52 @@ const (
 var (
 	Stopwords = []string{
 		"global",
+		"a",
+		"an",
+		"and",
+		"are",
+		"as",
+		"at",
+		"be",
+		"but",
+		"by",
+		"for",
+		"if",
+		"in",
+		"into",
+		"is",
+		"it",
+		"no",
+		"not",
+		"of",
+		"on",
+		"or",
+		"such",
+		"that",
+		"the",
+		"their",
+		"then",
+		"there",
+		"these",
+		"they",
+		"this",
+		"to",
+		"was",
+		"will",
+		"with",
+		"company",
+		"gruop ",
+		"service",
+		"services",
+		"inc",
+		"inp",
+		"llc",
+		"corp",
+		"ltd",
+		"enterpris",
+		"enterpre",
+		"global",
+		"llp",
 	}
 	es            *elastic.Client
 	re            *redis.Client

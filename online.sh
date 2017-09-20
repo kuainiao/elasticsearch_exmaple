@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo 'pack'
-export GOPATH=/Users/willian/Desktop/project/go/tradeweb
+export GOPATH=/c/Users/Administrator/Documents/tradeweb
 cd ${GOPATH}/src/github.com/zhangweilun/tradeweb
 GOOS=linux GOARCH=amd64 go build -i
 # tar -czf tradeweb.tar.gz ./tradeweb

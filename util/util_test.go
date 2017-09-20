@@ -17,3 +17,8 @@ func TestTrimFrontBack(t *testing.T) {
 	back := TrimFrontBack(s)
 	fmt.Println(back)
 }
+
+func TestFilterStopWords(t *testing.T) {
+	words := FilterStopWords("the hoover", "hoover")
+	fmt.Print(words)
+}

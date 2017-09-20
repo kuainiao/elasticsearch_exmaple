@@ -10,6 +10,7 @@ import (
 	"github.com/zhangweilun/gor"
 	"github.com/zhangweilun/goxmlpath"
 	"strings"
+
 )
 
 /**
@@ -28,6 +29,25 @@ func FloatToString(input_num float64) string {
 func Round(f float64, n int) float64 {
 	pow10_n := math.Pow10(n)
 	return math.Trunc((f+0.5/pow10_n)*pow10_n) / pow10_n
+}
+
+
+//去除停用词
+func FilterStopWords(s, stopword string) string {
+		start := strings.Index(s, stopword)
+		var result string
+		length := len(stopword)
+		if start != 0  {
+			//不是在第一个
+			result = s[0:start] + s[start+length:]
+		}else if start == 0 {
+			//是第一个单词
+			result = s[length:]
+		}
+	if result != "" {
+		result = TrimFrontBack(result)
+	}
+		return result
 }
 
 //return GoString's buffer slice(enable modify string)
