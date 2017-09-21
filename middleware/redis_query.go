@@ -6,7 +6,7 @@ import (
 
 	"github.com/henrylee2cn/faygo"
 	"github.com/zhangweilun/tradeweb/constants"
-
+	"time"
 	"strconv"
 )
 
@@ -27,12 +27,17 @@ var RedisCache = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 			index := strings.Index(url, "token")
 			url = url[0 : index-1]
 		}
+		redisKey := "GET"+url
 		val, err := redis.Get("GET" + url).Result()
 		if err == nil {
 			ctx.Stop()
+			err := redis.Set(redisKey, val, 1*time.Hour).Err()
+			if err != nil {
+				ctx.Log().Error(err)
+			}
 			return ctx.String(200, val)
 		}
-		ctx.SetData("redisKey", "GET"+url)
+		ctx.SetData("redisKey", redisKey)
 	} else if ctx.Method() == "POST" {
 		url := ctx.URI() + "?"
 		var ids []int
@@ -71,12 +76,17 @@ var RedisCache = faygo.HandlerFunc(func(ctx *faygo.Context) error {
 				}
 			}
 		}
-		val, err := redis.Get("POST"+url[0:len(url)-1]).Result()
+		redisKey := "POST"+url[0:len(url)-1]
+		val, err := redis.Get(redisKey).Result()
 		if err == nil {
 			ctx.Stop()
+			err := redis.Set(redisKey, val, 1*time.Hour).Err()
+			if err != nil {
+				ctx.Log().Error(err)
+			}
 			return ctx.String(200, val)
 		}
-		ctx.SetData("redisKey", "POST"+url[0:len(url)-1])
+		ctx.SetData("redisKey", redisKey)
 	}
 	return nil
 })

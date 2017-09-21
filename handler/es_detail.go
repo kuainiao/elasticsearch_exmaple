@@ -30,23 +30,24 @@ type CompanyRelations struct {
 }
 
 //Serve 处理方法
-func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
+func (param *CompanyRelations) Serve(ctx *faygo.Context) error {
 	var (
 		CompanyRelationsCtx context.Context
 		cancel              context.CancelFunc
 		search              *elastic.SearchService
 		query               *elastic.BoolQuery
 		collapse            *elastic.CollapseBuilder
+		redisKey string
 	)
-	if c.TimeOut != 0 {
-		CompanyRelationsCtx, cancel = context.WithTimeout(context.Background(), c.TimeOut*time.Second)
+	if param.TimeOut != 0 {
+		CompanyRelationsCtx, cancel = context.WithTimeout(context.Background(), param.TimeOut*time.Second)
 	} else {
 		CompanyRelationsCtx, cancel = context.WithCancel(context.Background())
 	}
 	defer cancel()
 	//companyName待查
 	relationship := model.Relationship{
-		CompanyID:  c.CompanyID,
+		CompanyID:  param.CompanyID,
 		ParentID:   0,
 		ParentName: "",
 	}
@@ -54,11 +55,9 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 	search = client.Search().Index(constants.IndexName).Type(constants.TypeName)
 	query = elastic.NewBoolQuery()
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"), elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
-	proKey, _ := url.PathUnescape(c.ProKey)
-	if proKey != "" {
-		proKey = util.TrimFrontBack(proKey)
-	}
-	if c.ProductName == 0 {
+	proKey, _ := url.PathUnescape(param.ProKey)
+	proKey = util.TrimFrontBack(proKey)
+	if param.ProductName == 0 {
 		if proKey != "All Product" && proKey != "" {
 			query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 		}
@@ -66,13 +65,13 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		query = query.Filter(elastic.NewTermQuery("ProductName.keyword", proKey))
 	}
 
-	if c.CompanyType == 0 {
-		query = query.Must(elastic.NewTermQuery("PurchaserId", c.CompanyID))
+	if param.CompanyType == 0 {
+		query = query.Must(elastic.NewTermQuery("PurchaserId", param.CompanyID))
 		collapse = elastic.NewCollapseBuilder("SupplierId").
 			InnerHit(elastic.NewInnerHit().Name("SupplierId").Size(0).Sort("FrankTime", false)).
 			MaxConcurrentGroupRequests(4)
 	} else {
-		query = query.Must(elastic.NewTermQuery("SupplierId", c.CompanyID))
+		query = query.Must(elastic.NewTermQuery("SupplierId", param.CompanyID))
 		collapse = elastic.NewCollapseBuilder("PurchaserId").
 			InnerHit(elastic.NewInnerHit().Name("PurchaserId").Size(0).Sort("FrankTime", false)).
 			MaxConcurrentGroupRequests(4)
@@ -85,7 +84,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		ctx.Log().Error(err)
 	}
 	//一级 采购
-	if c.CompanyType == 0 {
+	if param.CompanyType == 0 {
 		//查供应商 一级
 		if len(res.Hits.Hits) > 0 {
 			for i := 0; i < len(res.Hits.Hits); i++ {
@@ -112,7 +111,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			MaxConcurrentGroupRequests(4)
 		for i := 0; i < len(relationship.Partner); i++ {
 			query := elastic.NewBoolQuery()
-			if c.ProductName == 0 {
+			if param.ProductName == 0 {
 				if proKey != "All Product" && proKey != "" {
 					query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 				}
@@ -152,7 +151,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		for i := 0; i < len(relationship.Partner); i++ {
 			for j := 0; j < len(relationship.Partner[i].Partner); j++ {
 				query := elastic.NewBoolQuery()
-				if c.ProductName == 0 {
+				if param.ProductName == 0 {
 					if proKey != "All Product" && proKey != "" {
 						query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 					}
@@ -213,7 +212,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 			MaxConcurrentGroupRequests(4)
 		for i := 0; i < len(relationship.Partner); i++ {
 			query := elastic.NewBoolQuery()
-			if c.ProductName == 0 {
+			if param.ProductName == 0 {
 				if proKey != "All Product" && proKey != "" {
 					query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 				}
@@ -251,7 +250,7 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 		for i := 0; i < len(relationship.Partner); i++ {
 			for j := 0; j < len(relationship.Partner[i].Partner); j++ {
 				query := elastic.NewBoolQuery()
-				if c.ProductName == 0 {
+				if param.ProductName == 0 {
 					if proKey != "All Product" && proKey != "" {
 						query = query.Must(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 					}
@@ -290,6 +289,13 @@ func (c *CompanyRelations) Serve(ctx *faygo.Context) error {
 	})
 	if err != nil {
 		ctx.Log().Error(err)
+	}
+	if ctx.HasData("redisKey") {
+		redisKey = ctx.Data("redisKey").(string)
+		err := redis.Set(redisKey, util.BytesString(result), 1*time.Hour).Err()
+		if err != nil {
+			ctx.Log().Error(err)
+		}
 	}
 	return ctx.Bytes(200, faygo.MIMEApplicationJSONCharsetUTF8, result)
 }
@@ -348,9 +354,9 @@ func (detailTrend *DetailTrend) Serve(ctx *faygo.Context) error {
 	dateAgg = elastic.NewDateHistogramAggregation()
 	ids := strings.Split(detailTrend.CompanyIDArray, ",")
 	proKey, _ := url.PathUnescape(detailTrend.ProKey)
-	if proKey != "" {
+	
 		proKey = util.TrimFrontBack(proKey)
-	}
+	
 	if proKey != "All Product" && proKey != "" {
 		query = query.Filter(elastic.NewMatchQuery("ProDesc", strings.ToLower(proKey)))
 	}
