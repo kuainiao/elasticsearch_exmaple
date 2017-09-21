@@ -118,8 +118,12 @@ var Words = func() []string {
 
 //去除前后空格
 func TrimFrontBack(s string) string {
-	word := "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM"
-	indexAny := strings.IndexAny(s, word)
-	lastIndexAny := strings.LastIndexAny(s, word)
-	return s[indexAny : lastIndexAny+1]
+    if s == ""{
+		return s
+	}else {
+		word := "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM"
+		indexAny := strings.IndexAny(s, word)
+		lastIndexAny := strings.LastIndexAny(s, word)
+		return s[indexAny : lastIndexAny+1]
+	}
 }

@@ -312,9 +312,9 @@ func (param *Search) Serve(ctx *faygo.Context) error {
 	query = query.MustNot(elastic.NewMatchQuery("Supplier", "UNAVAILABLE"),
 		elastic.NewMatchQuery("Purchaser", "UNAVAILABLE"))
 	proKey, _ := url.PathUnescape(param.ProKey)
-	if proKey != "" {
-		proKey = util.TrimFrontBack(proKey)
-	}
+	
+	proKey = util.TrimFrontBack(proKey)
+	
 	lowerCompany := strings.ToLower(param.CompanyName)
 	//判断是否全称存在
 	if param.CompanyName != "" {
